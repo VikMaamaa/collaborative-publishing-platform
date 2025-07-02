@@ -172,7 +172,7 @@ export const useAppStore = create<AppStore>()(
       user: null,
       accessToken: null,
       isAuthenticated: false,
-      isLoading: true,
+      isLoading: false,
       
       organizations: [],
       activeOrganization: null,
