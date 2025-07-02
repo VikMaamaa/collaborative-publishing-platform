@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useId } from 'react';
 
 interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size'> {
   label?: string;
@@ -26,7 +26,8 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
     },
     ref
   ) => {
-    const inputId = id || `input-${Math.random().toString(36).substr(2, 9)}`;
+    const reactId = useId();
+    const inputId = id || `input-${reactId}`;
 
     const sizeClasses = {
       sm: 'px-3 py-1.5 text-sm',
