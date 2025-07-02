@@ -4,7 +4,8 @@ import { Repository } from 'typeorm';
 import { ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { UsersService, CreateUserDto, UpdateUserDto } from './users.service';
 import { User, UserRole } from './user.entity';
-import { OrganizationMember, OrganizationRole } from '../organizations/organization-member.entity';
+import { OrganizationMember } from '../organizations/organization-member.entity';
+import { OrganizationRole } from '../organizations/organization-role.enum';
 import { Organization } from '../organizations/organization.entity';
 import * as bcrypt from 'bcryptjs';
 

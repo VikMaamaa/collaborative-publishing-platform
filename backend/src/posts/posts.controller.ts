@@ -14,7 +14,7 @@ import {
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { OrganizationGuard } from '../auth/guards/organization.guard';
 import { RequireRole } from '../auth/decorators/require-role.decorator';
-import { OrganizationRole } from '../organizations/organization-member.entity';
+import { OrganizationRole } from '../organizations/organization-role.enum';
 import { PostsService } from './posts.service';
 import {
   CreatePostDto,

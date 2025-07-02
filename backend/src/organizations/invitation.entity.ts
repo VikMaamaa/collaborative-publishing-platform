@@ -1,7 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { Organization } from './organization.entity';
 import { User } from '../users/user.entity';
-import { OrganizationRole } from './organization-member.entity';
+import { OrganizationRole } from './organization-role.enum';
 
 export enum InvitationStatus {
   PENDING = 'pending',
@@ -24,7 +24,6 @@ export class Invitation {
   @Column({ 
     type: 'enum', 
     enum: OrganizationRole,
-    enumName: 'organization_role'
   })
   role: OrganizationRole;
 
@@ -32,7 +31,6 @@ export class Invitation {
     type: 'enum', 
     enum: InvitationStatus, 
     default: InvitationStatus.PENDING,
-    enumName: 'invitation_status'
   })
   status: InvitationStatus;
 

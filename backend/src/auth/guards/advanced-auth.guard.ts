@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { AdvancedAuthService, PermissionContext } from '../services/advanced-auth.service';
-import { OrganizationRole } from '../../organizations/organization-member.entity';
+import { OrganizationRole } from '../../organizations/organization-role.enum';
 
 export interface AdvancedAuthMetadata {
   requireOwner?: boolean;

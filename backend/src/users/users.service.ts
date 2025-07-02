@@ -2,7 +2,7 @@ import { Injectable, ConflictException, NotFoundException, BadRequestException }
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User, UserRole } from './user.entity';
-import { OrganizationRole } from '../organizations/organization-member.entity';
+import { OrganizationRole } from '../organizations/organization-role.enum';
 import * as bcrypt from 'bcryptjs';
 import { validate as uuidValidate } from 'uuid';
 import { OrganizationMember } from '../organizations/organization-member.entity';

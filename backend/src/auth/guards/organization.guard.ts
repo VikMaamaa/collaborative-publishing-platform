@@ -8,7 +8,8 @@ import { Reflector } from '@nestjs/core';
 import { ROLES_KEY } from '../decorators/roles.decorator';
 import { UsersService } from '../../users/users.service';
 import { OrganizationsService } from '../../organizations/organizations.service';
-import { OrganizationMember, OrganizationRole } from '../../organizations/organization-member.entity';
+import { OrganizationMember } from '../../organizations/organization-member.entity';
+import { OrganizationRole } from '../../organizations/organization-role.enum';
 
 @Injectable()
 export class OrganizationGuard implements CanActivate {

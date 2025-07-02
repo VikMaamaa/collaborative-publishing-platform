@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsString, MinLength, IsOptional, IsUUID, IsEnum, IsUrl } from 'class-validator';
-import { OrganizationRole } from '../organization-member.entity';
+import { OrganizationRole } from '../organization-role.enum';
 import { InvitationStatus } from '../invitation.entity';
 
 export class CreateOrganizationDto {

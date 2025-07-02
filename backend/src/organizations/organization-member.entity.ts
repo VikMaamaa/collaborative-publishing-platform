@@ -9,12 +9,7 @@ import {
 } from 'typeorm';
 import { User } from '../users/user.entity';
 import { Organization } from './organization.entity';
-
-export enum OrganizationRole {
-  OWNER = 'owner',
-  EDITOR = 'editor',
-  WRITER = 'writer',
-}
+import { OrganizationRole } from './organization-role.enum';
 
 @Entity('organization_members')
 export class OrganizationMember {

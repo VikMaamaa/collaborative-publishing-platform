@@ -2,7 +2,8 @@ import { Injectable, NotFoundException, ForbiddenException, ConflictException } 
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Post, PostStatus } from './post.entity';
-import { OrganizationMember, OrganizationRole } from '../organizations/organization-member.entity';
+import { OrganizationMember } from '../organizations/organization-member.entity';
+import { OrganizationRole } from '../organizations/organization-role.enum';
 import { TransactionService } from '../common/services/transaction.service';
 import { NotificationQueue } from '../queues/notification.queue';
 import { RealtimeService } from '../realtime/realtime.service';

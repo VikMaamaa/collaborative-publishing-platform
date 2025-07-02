@@ -1,7 +1,8 @@
 import { Injectable, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { OrganizationMember, OrganizationRole } from '../../organizations/organization-member.entity';
+import { OrganizationMember } from '../../organizations/organization-member.entity';
+import { OrganizationRole } from '../../organizations/organization-role.enum';
 import { Organization } from '../../organizations/organization.entity';
 import { User, UserRole } from '../../users/user.entity';
 

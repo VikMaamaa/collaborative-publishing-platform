@@ -3,7 +3,8 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { BadRequestException } from '@nestjs/common';
 import { AdvancedAuthService, PermissionContext, ComplexPermissionCheck } from './advanced-auth.service';
-import { OrganizationMember, OrganizationRole } from '../../organizations/organization-member.entity';
+import { OrganizationMember } from '../../organizations/organization-member.entity';
+import { OrganizationRole } from '../../organizations/organization-role.enum';
 import { Organization } from '../../organizations/organization.entity';
 import { User, UserRole } from '../../users/user.entity';
 

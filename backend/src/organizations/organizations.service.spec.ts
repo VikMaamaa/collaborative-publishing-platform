@@ -4,7 +4,8 @@ import { Repository } from 'typeorm';
 import { NotFoundException, ForbiddenException, ConflictException } from '@nestjs/common';
 import { OrganizationsService } from './organizations.service';
 import { Organization } from './organization.entity';
-import { OrganizationMember, OrganizationRole } from './organization-member.entity';
+import { OrganizationMember } from './organization-member.entity';
+import { OrganizationRole } from './organization-role.enum';
 import { User } from '../users/user.entity';
 import { Invitation } from './invitation.entity';
 import {
