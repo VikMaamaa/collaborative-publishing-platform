@@ -1,0 +1,44 @@
+{
+  "name": "frontend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "lint:fix": "next lint --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "type-check": "tsc --noEmit",
+    "check": "npm run type-check && npm run lint && npm run format:check"
+  },
+  "dependencies": {
+    "@tiptap/extension-image": "^2.23.1",
+    "@tiptap/extension-link": "^2.23.1",
+    "@tiptap/extension-placeholder": "^2.23.1",
+    "@tiptap/extension-text-align": "^2.23.1",
+    "@tiptap/extension-underline": "^2.23.1",
+    "@tiptap/react": "^2.23.1",
+    "@tiptap/starter-kit": "^2.23.1",
+    "next": "15.3.4",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "zustand": "^5.0.6"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@typescript-eslint/eslint-plugin": "^8.35.0",
+    "@typescript-eslint/parser": "^8.35.0",
+    "eslint": "^9",
+    "eslint-config-next": "15.3.4",
+    "prettier": "^3.6.2",
+    "prettier-plugin-tailwindcss": "^0.6.13",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}
