@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/lib/hooks';
 import { Button, SkeletonCard } from '@/components/ui';
 
 export default function HomePage() {
