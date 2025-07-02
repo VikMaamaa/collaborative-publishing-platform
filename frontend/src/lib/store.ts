@@ -210,14 +210,13 @@ export const useAppStore = create<AppStore>()(
         try {
           set({ isLoading: true });
           const response = await apiClient.login({ email, password });
-          
           set({
             user: response.user,
             accessToken: response.access_token,
             isAuthenticated: true,
             isLoading: false,
           });
-          
+          apiClient.setToken(response.access_token);
           // Load user's organizations after login
           await get().loadOrganizations();
         } catch (error) {
@@ -230,14 +229,13 @@ export const useAppStore = create<AppStore>()(
         try {
           set({ isLoading: true });
           const response = await apiClient.register(userData);
-          
           set({
             user: response.user,
             accessToken: response.access_token,
             isAuthenticated: true,
             isLoading: false,
           });
-          
+          apiClient.setToken(response.access_token);
           // Load user's organizations after registration
           await get().loadOrganizations();
         } catch (error) {
