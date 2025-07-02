@@ -5,26 +5,26 @@ import CreateOrganizationModal from '@/components/organizations/CreateOrganizati
 import InviteMemberModal from '@/components/organizations/InviteMemberModal';
 
 export default function ModalManager() {
-  const { modals, closeModal, confirmModal, closeConfirmModal } = useUI();
+  const { modals = { createOrganization: false, inviteMember: false }, closeModal = () => {}, confirmModal = { open: false }, closeConfirmModal = () => {} } = useUI();
   const { activeOrganization } = useOrganizations();
 
   return (
     <>
       {/* Create Organization Modal */}
       <CreateOrganizationModal
-        isOpen={modals.createOrganization}
+        isOpen={modals?.createOrganization ?? false}
         onClose={() => closeModal('createOrganization')}
       />
 
       {/* Invite Member Modal */}
       <InviteMemberModal
-        isOpen={modals.inviteMember}
+        isOpen={modals?.inviteMember ?? false}
         onClose={() => closeModal('inviteMember')}
         organizationId={activeOrganization?.id || ''}
       />
 
       {/* Contextual Confirmation Modal */}
-      {confirmModal.open && (
+      {confirmModal && confirmModal.open && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
             <div 
