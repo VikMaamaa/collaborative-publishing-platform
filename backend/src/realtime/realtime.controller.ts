@@ -3,7 +3,7 @@ import { Response, Request } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RealtimeService } from './realtime.service';
 
-@Controller('api/realtime')
+@Controller('realtime')
 export class RealtimeController {
   constructor(private readonly realtimeService: RealtimeService) {}
 
