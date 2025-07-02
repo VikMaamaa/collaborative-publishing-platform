@@ -9,6 +9,7 @@ import { TransactionService } from '../common/services/transaction.service';
 import { QueuesModule } from '../queues/queues.module';
 import { UsersModule } from '../users/users.module';
 import { OrganizationsModule } from '../organizations/organizations.module';
+import { RealtimeModule } from '../realtime/realtime.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { OrganizationsModule } from '../organizations/organizations.module';
     QueuesModule,
     UsersModule,
     OrganizationsModule,
+    RealtimeModule,
   ],
   controllers: [PostsController],
   providers: [PostsService, OrganizationGuard, TransactionService],

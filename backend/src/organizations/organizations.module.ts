@@ -8,11 +8,13 @@ import { OrganizationsController } from './organizations.controller';
 import { UsersModule } from '../users/users.module';
 import { OrganizationGuard } from '../auth/guards/organization.guard';
 import { Invitation } from './invitation.entity';
+import { RealtimeModule } from '../realtime/realtime.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Organization, OrganizationMember, User, Invitation]),
     UsersModule,
+    RealtimeModule,
   ],
   controllers: [OrganizationsController],
   providers: [OrganizationsService, OrganizationGuard],
