@@ -22,7 +22,9 @@ class RealtimeService {
     }
 
     try {
-      const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/realtime/events?userId=${userId}&token=${encodeURIComponent(token)}`;
+      let baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+      baseUrl = baseUrl.replace(/\/api$/, '');
+      const url = `${baseUrl}/api/realtime/events?userId=${userId}&token=${encodeURIComponent(token)}`;
       this.eventSource = new EventSource(url);
 
       this.setupEventListeners();
