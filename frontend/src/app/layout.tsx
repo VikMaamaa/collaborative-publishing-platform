@@ -7,6 +7,7 @@ import RealtimeProvider from "@/components/providers/RealtimeProvider";
 import SEOHead, { SEOConfigs } from "@/components/seo/SEOHead";
 import { basicPerformanceMonitor as performanceMonitor } from "@/lib/performance";
 import { LazyComponent } from "@/components/lazy/LazyComponents";
+import { AuthProvider } from '@/contexts/AuthContext';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -71,18 +72,20 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         suppressHydrationWarning={true}
       >
-        <ErrorBoundary>
-          {children}
-          <LazyComponent>
-            <NotificationContainer />
-          </LazyComponent>
-          <LazyComponent>
-            <ModalManager />
-          </LazyComponent>
-          <LazyComponent>
-            <RealtimeProvider />
-          </LazyComponent>
-        </ErrorBoundary>
+        <AuthProvider>
+          <ErrorBoundary>
+            {children}
+            <LazyComponent>
+              <NotificationContainer />
+            </LazyComponent>
+            <LazyComponent>
+              <ModalManager />
+            </LazyComponent>
+            <LazyComponent>
+              <RealtimeProvider />
+            </LazyComponent>
+          </ErrorBoundary>
+        </AuthProvider>
       </body>
     </html>
   );
