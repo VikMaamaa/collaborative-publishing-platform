@@ -599,4 +599,12 @@ services:
 1. **Application Monitoring**: Integrate APM tools for performance monitoring
 2. **Log Aggregation**: Implement centralized logging with ELK stack
 3. **Health Checks**: Add comprehensive health check endpoints
-4. **Metrics Collection**: Implement metrics collection for operational insights 
+4. **Metrics Collection**: Implement metrics collection for operational insights
+
+### Development Workflow
+
+- To populate the database with demo/demo data, run:
+  ```bash
+  npm run seed
+  ```
+  This will clear and insert demo users, organizations, memberships, and posts for local development. 

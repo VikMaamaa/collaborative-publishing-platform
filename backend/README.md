@@ -57,4 +57,21 @@ This backend follows a modular architecture with the following modules:
 - **OrganizationsModule** - Multi-tenant organization management
 - **PostsModule** - Article/posting functionality
 
-Each module contains its own controllers, services, and entities following NestJS best practices. 
+Each module contains its own controllers, services, and entities following NestJS best practices.
+
+## Seeding the Database
+
+You can populate the database with demo data for development/testing:
+
+```bash
+npm run seed
+```
+
+This will:
+- Clear all existing users, organizations, memberships, and posts (dev only!)
+- Create a superadmin and a regular user
+- Create a demo organization
+- Add both users as members (owner/writer)
+- Add two sample posts
+
+Modify `src/seed.ts` to customize the seed data as needed. 
