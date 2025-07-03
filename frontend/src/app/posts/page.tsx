@@ -1,19 +1,18 @@
+'use client';
+
 import React from 'react';
-import { postService } from '@/lib/services';
 import PostList from '@/components/posts/PostList';
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
 
-export const revalidate = 60;
-
-export default async function PostsPage() {
-  const postsResponse = await postService.getPosts({ status: 'published', limit: 100 });
-  const posts = postsResponse.items || postsResponse;
-
+export default function PostsPage() {
   return (
-    <div className="max-w-5xl mx-auto py-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Posts</h1>
+    <ProtectedRoute>
+      <div className="max-w-5xl mx-auto py-8">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold">Posts</h1>
+        </div>
+        <PostList />
       </div>
-      <PostList posts={posts} />
-    </div>
+    </ProtectedRoute>
   );
 } 

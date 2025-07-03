@@ -10,27 +10,29 @@ interface ProtectedRouteProps {
 }
 
 export default function ProtectedRoute({ children, redirectTo = '/login' }: ProtectedRouteProps) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user, hasHydrated } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
+    // Only redirect after hydration is complete and we're not loading
+    if (hasHydrated && !isLoading && (!isAuthenticated || !user)) {
       router.replace(redirectTo);
     }
-  }, [isLoading, isAuthenticated, router, redirectTo]);
-
-  if (isLoading) {
+  }, [hasHydrated, isLoading, isAuthenticated, user, router, redirectTo]);
+  
+  // Show loading while hydrating or loading
+  if (!hasHydrated || isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-gray-500 text-lg">Loading...</div>
       </div>
     );
   }
-
-  if (!isAuthenticated) {
-    // Optionally, render nothing while redirecting
+  
+  // Don't render anything if not authenticated (will redirect)
+  if (!isAuthenticated || !user) {
     return null;
   }
-
+  
   return <>{children}</>;
 } 

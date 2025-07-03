@@ -128,12 +128,12 @@ class ApiClient {
     return localStorage.getItem('access_token');
   }
 
-  private setToken(token: string): void {
+  public setToken(token: string): void {
     if (typeof window === 'undefined') return;
     localStorage.setItem('access_token', token);
   }
 
-  private clearAuth(): void {
+  public clearAuth(): void {
     if (typeof window === 'undefined') return;
     localStorage.removeItem('access_token');
     // Dispatch logout event for store
@@ -170,21 +170,28 @@ class ApiClient {
     const url = this.buildUrl(endpoint, config.params);
     const requestKey = `${config.method || 'GET'}:${endpoint}`;
     
+    console.log('Making request to:', url);
+    console.log('Request config:', config);
+    
     try {
       // Set loading state
       loadingManager.setLoading(requestKey, true);
       
       // Apply request interceptor
       const interceptedConfig = await this.requestInterceptor(config);
+      console.log('Intercepted config:', interceptedConfig);
       
       // Make request
       const response = await fetch(url, interceptedConfig);
+      console.log('Response status:', response.status);
       
       // Apply response interceptor
       const data = await this.responseInterceptor<T>(response, interceptedConfig);
+      console.log('Response data:', data);
       
       return data;
     } catch (error) {
+      console.error('Request error:', error);
       if (error instanceof ApiError) {
         throw error;
       }
@@ -256,7 +263,14 @@ class ApiClient {
   }
 
   // User endpoints
-  async getCurrentUser(): Promise<User> {
+  async getCurrentUser(userId?: string): Promise<User> {
+    console.log('getCurrentUser called with userId:', userId);
+    if (userId) {
+      console.log('Calling /users/me/${userId}');
+      return this.request<User>(`/users/me/${userId}`);
+    }
+    // Fallback to /me endpoint if no userId provided
+    console.log('Calling /users/me');
     return this.request<User>('/users/me');
   }
 

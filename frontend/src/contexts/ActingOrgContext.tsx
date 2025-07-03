@@ -1,42 +1,50 @@
 'use client';
 
 import React, { createContext, useContext } from 'react';
-import { useAppStore } from '@/lib/store';
+import { useAppSelector, useAppDispatch } from '@/store/hooks';
+import { setActingAsOrganization, clearActingAsOrganization } from '@/store/organizationsSlice';
 
 interface ActingOrgContextValue {
   actingAsOrganizationId: string | null;
-  setActingAsOrganization: (orgId: string | null) => void;
+  setActingAsOrganization: (id: string | null) => void;
 }
 
 const ActingOrgContext = createContext<ActingOrgContextValue | undefined>(undefined);
 
 export function ActingOrgProvider({ children }: { children: React.ReactNode }) {
-  const actingAsOrganizationId = useAppStore(state => state.actingAsOrganizationId);
-  const setActingAsOrganization = useAppStore(state => state.setActingAsOrganization);
-
+  const actingAsOrganizationId = useAppSelector(state => state.organizations.actingAsOrganizationId);
+  const dispatch = useAppDispatch();
+  const setActing = (id: string | null) => {
+    if (id) {
+      dispatch(setActingAsOrganization(id));
+    } else {
+      dispatch(clearActingAsOrganization());
+    }
+  };
   return (
-    <ActingOrgContext.Provider value={{ actingAsOrganizationId, setActingAsOrganization }}>
+    <ActingOrgContext.Provider value={{ actingAsOrganizationId, setActingAsOrganization: setActing }}>
       {children}
-      <ActingOrgBanner />
     </ActingOrgContext.Provider>
   );
 }
 
 export function useActingOrg() {
-  const ctx = useContext(ActingOrgContext);
-  if (!ctx) throw new Error('useActingOrg must be used within ActingOrgProvider');
-  return ctx;
+  const context = useContext(ActingOrgContext);
+  if (!context) {
+    throw new Error('useActingOrg must be used within an ActingOrgProvider');
+  }
+  return context;
 }
 
-function ActingOrgBanner() {
-  const actingAsOrganizationId = useAppStore(state => state.actingAsOrganizationId);
-  const organizations = useAppStore(state => state.organizations);
+export function ActingOrgBanner() {
+  const actingAsOrganizationId = useAppSelector(state => state.organizations.actingAsOrganizationId);
+  const organizations = useAppSelector(state => state.organizations.organizations);
   if (!actingAsOrganizationId) return null;
-  const org = organizations.find(o => o.id === actingAsOrganizationId);
+  const org = organizations.find((o: any) => o.id === actingAsOrganizationId);
+  if (!org) return null;
   return (
-    <div className="fixed top-0 left-0 w-full z-50 bg-yellow-100 text-yellow-900 text-center py-2 shadow">
-      <span className="font-semibold">Acting as organization:</span> {org?.name || actingAsOrganizationId}
-      <span className="ml-4 text-xs">(Cross-organization permissions in effect)</span>
+    <div className="bg-blue-100 text-blue-800 px-4 py-2 text-sm">
+      Acting as organization: <strong>{org.name}</strong>
     </div>
   );
 } 

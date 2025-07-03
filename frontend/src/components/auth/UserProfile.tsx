@@ -139,6 +139,7 @@ export default function UserProfile() {
       
       // Show success notification
       addNotification({
+        id: Date.now().toString() + Math.random().toString(36).slice(2),
         type: 'success',
         message: 'Profile updated successfully!',
         duration: 3000,
@@ -151,6 +152,7 @@ export default function UserProfile() {
       
       // Show error notification
       addNotification({
+        id: Date.now().toString() + Math.random().toString(36).slice(2),
         type: 'error',
         message: error.message || 'Failed to update profile. Please try again.',
         duration: 5000,
@@ -187,6 +189,7 @@ export default function UserProfile() {
       
       // Show success notification
       addNotification({
+        id: Date.now().toString() + Math.random().toString(36).slice(2),
         type: 'success',
         message: 'Password changed successfully!',
         duration: 3000,
@@ -199,6 +202,7 @@ export default function UserProfile() {
       
       // Show error notification
       addNotification({
+        id: Date.now().toString() + Math.random().toString(36).slice(2),
         type: 'error',
         message: error.message || 'Failed to change password. Please try again.',
         duration: 5000,
@@ -449,6 +453,7 @@ export default function UserProfile() {
                                 if (!user) throw new Error('No user logged in');
                                 await apiClient.deleteAccount(user.id);
                                 addNotification({
+                                  id: Date.now().toString() + Math.random().toString(36).slice(2),
                                   type: 'success',
                                   message: 'Account deleted successfully. You will be logged out.',
                                   duration: 4000,
@@ -457,6 +462,7 @@ export default function UserProfile() {
                                 router.push('/');
                               } catch (error: any) {
                                 addNotification({
+                                  id: Date.now().toString() + Math.random().toString(36).slice(2),
                                   type: 'error',
                                   message: error.message || 'Failed to delete account. Please try again.',
                                   duration: 4000,

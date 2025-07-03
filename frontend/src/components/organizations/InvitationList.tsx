@@ -1,41 +1,44 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useOrganizationsWithNotifications, useUI } from '@/lib/hooks';
+import { useAppSelector, useAppDispatch } from '@/store/hooks';
+import { loadOrganizationInvitations, resendInvitation, cancelInvitation } from '@/store/organizationsSlice';
+import { useUI } from '@/lib/hooks';
 import { Button, Badge, SkeletonList } from '@/components/ui';
-import { ROLES } from '@/lib/store';
+import { ROLES } from '@/constants/roles';
 
 interface InvitationListProps {
   organizationId: string;
 }
 
 export default function InvitationList({ organizationId }: InvitationListProps) {
-  const { 
-    organizationInvitations, 
-    isLoadingInvitations,
-    loadOrganizationInvitations,
-    resendInvitationWithNotification, 
-    cancelInvitationWithConfirmation 
-  } = useOrganizationsWithNotifications();
-  const { } = useUI();
+  const dispatch = useAppDispatch();
+  const { addNotification } = useUI();
+  const organizationInvitations = useAppSelector(state => state.organizations.organizationInvitations || []);
+  const isLoadingInvitations = useAppSelector(state => state.organizations.isLoadingInvitations);
 
   useEffect(() => {
     if (organizationId) {
-      loadOrganizationInvitations(organizationId);
+      dispatch(loadOrganizationInvitations(organizationId));
     }
-  }, [organizationId, loadOrganizationInvitations]);
+  }, [organizationId, dispatch]);
 
   const handleResendInvitation = async (invitationId: string, email: string) => {
     try {
-      await resendInvitationWithNotification(organizationId, invitationId);
+      await dispatch(resendInvitation({ organizationId, invitationId })).unwrap();
+      addNotification({ id: Date.now().toString() + Math.random().toString(36).slice(2), type: 'success', message: `Invitation resent to ${email}` });
     } catch (error: any) {
-      // Error handling is now done in the enhanced hook
-      throw error;
+      addNotification({ id: Date.now().toString() + Math.random().toString(36).slice(2), type: 'error', message: error.message || 'Failed to resend invitation' });
     }
   };
 
-  const handleCancelInvitation = (invitationId: string, email: string) => {
-    cancelInvitationWithConfirmation(organizationId, invitationId, email);
+  const handleCancelInvitation = async (invitationId: string, email: string) => {
+    try {
+      await dispatch(cancelInvitation({ organizationId, invitationId })).unwrap();
+      addNotification({ id: Date.now().toString() + Math.random().toString(36).slice(2), type: 'success', message: `Invitation for ${email} cancelled` });
+    } catch (error: any) {
+      addNotification({ id: Date.now().toString() + Math.random().toString(36).slice(2), type: 'error', message: error.message || 'Failed to cancel invitation' });
+    }
   };
 
   const getRoleBadgeColor = (role: string) => {

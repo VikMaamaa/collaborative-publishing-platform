@@ -1,16 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import { useUI } from '@/lib/hooks';
+import { useRouter } from 'next/navigation';
 import { useAppDispatch } from '@/store/hooks';
-import { createOrganization } from '@/store/organizationsSlice';
+import { createOrganization, inviteMember } from '@/store/organizationsSlice';
+import { useUI } from '@/lib/hooks';
 import { Button, Input, Card } from '@/components/ui';
 import { ROLES } from '@/constants/roles';
-
-interface CreateOrganizationModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-}
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
+import DashboardLayout from '@/components/layout/DashboardLayout';
+import SEOHead, { SEOConfigs } from '@/components/seo/SEOHead';
 
 interface FormData {
   name: string;
@@ -23,7 +22,8 @@ interface FormErrors {
   general?: string;
 }
 
-export default function CreateOrganizationModal({ isOpen, onClose }: CreateOrganizationModalProps) {
+export default function CreateOrganizationPage() {
+  const router = useRouter();
   const dispatch = useAppDispatch();
   const { addNotification } = useUI();
   
@@ -95,32 +95,35 @@ export default function CreateOrganizationModal({ isOpen, onClose }: CreateOrgan
         name: formData.name.trim(),
         description: formData.description.trim() || undefined,
       }));
-      // The result.payload contains the created organization
+      let createdOrgId = null;
       if (result.payload && typeof result.payload === 'object' && 'id' in result.payload) {
-        setOrgId(result.payload.id);
+        createdOrgId = result.payload.id;
+        setOrgId(createdOrgId);
       }
-      
       // Step 2: Invite members
-      for (const m of members.filter(m => m.email.trim())) {
-        try {
-          // TODO: Use dispatch(inviteMember(...)) as needed
-          console.log(`Would invite ${m.email} with role ${m.role}`);
-        } catch (err: any) {
-          console.error(`Failed to invite ${m.email}:`, err);
-        }
+      if (createdOrgId) {
+        await Promise.all(
+          members
+            .filter(m => m.email.trim())
+            .map(m =>
+              dispatch(inviteMember({
+                organizationId: createdOrgId,
+                email: m.email.trim(),
+                role: m.role,
+              }))
+            )
+        );
       }
-      
       addNotification({
         id: Date.now().toString(),
         type: 'success',
         message: `Organization "${formData.name}" created successfully!`,
         duration: 5000,
       });
-      
       setFormData({ name: '', description: '' });
       setMembers([{ email: '', role: ROLES.VIEWER }]);
       setStep(1);
-      onClose();
+      router.push('/organizations');
     } catch (error: any) {
       setErrors({ general: error.message || 'Failed to create organization. Please try again.' });
       addNotification({
@@ -151,17 +154,6 @@ export default function CreateOrganizationModal({ isOpen, onClose }: CreateOrgan
     }
   };
 
-  const handleClose = () => {
-    if (!isSubmitting) {
-      setFormData({ name: '', description: '' });
-      setErrors({});
-      setStep(1);
-      onClose();
-    }
-  };
-
-  if (!isOpen) return null;
-
   const steps = [
     { id: 1, title: 'Organization Details', icon: '🏢' },
     { id: 2, title: 'Invite Members', icon: '👥' },
@@ -169,59 +161,39 @@ export default function CreateOrganizationModal({ isOpen, onClose }: CreateOrgan
   ];
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        {/* Enhanced background overlay */}
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm transition-opacity"
-          onClick={handleClose}
-        />
-
-        {/* Enhanced modal panel */}
-        <div className="inline-block align-bottom bg-white rounded-xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full border border-gray-200">
-          {/* Header with step indicator */}
-          <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
+    <ProtectedRoute>
+      <SEOHead {...SEOConfigs.dashboard} />
+      <DashboardLayout>
+        <div className="max-w-4xl mx-auto py-8 px-4">
+          {/* Header */}
+          <div className="mb-8">
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
-                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                  </svg>
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-white">
-                    Create New Organization
-                  </h3>
-                  <p className="text-blue-100 text-sm">
-                    Step {step} of 3: {steps[step - 1]?.title}
-                  </p>
-                </div>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">Create New Organization</h1>
+                <p className="text-gray-600 mt-2">Set up your organization and invite team members</p>
               </div>
-              <button
-                onClick={handleClose}
-                disabled={isSubmitting}
-                className="text-white hover:text-blue-200 transition-colors disabled:opacity-50"
+              <Button
+                variant="outline"
+                onClick={() => router.push('/organizations')}
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
+                Cancel
+              </Button>
             </div>
             
             {/* Step indicator */}
-            <div className="mt-4 flex items-center justify-center space-x-4">
+            <div className="mt-6 flex items-center justify-center space-x-4">
               {steps.map((s, index) => (
                 <div key={s.id} className="flex items-center">
-                  <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium ${
+                  <div className={`flex items-center justify-center w-10 h-10 rounded-full text-sm font-medium ${
                     step >= s.id 
-                      ? 'bg-white text-blue-600' 
-                      : 'bg-white bg-opacity-20 text-white'
+                      ? 'bg-blue-600 text-white' 
+                      : 'bg-gray-200 text-gray-600'
                   }`}>
                     {step > s.id ? '✓' : s.id}
                   </div>
                   {index < steps.length - 1 && (
-                    <div className={`w-12 h-0.5 mx-2 ${
-                      step > s.id ? 'bg-white' : 'bg-white bg-opacity-20'
+                    <div className={`w-16 h-0.5 mx-2 ${
+                      step > s.id ? 'bg-blue-600' : 'bg-gray-200'
                     }`} />
                   )}
                 </div>
@@ -230,8 +202,8 @@ export default function CreateOrganizationModal({ isOpen, onClose }: CreateOrgan
           </div>
 
           {/* Form content */}
-          <div className="bg-white px-6 py-6">
-            <form onSubmit={handleSubmit} className="space-y-6">
+          <Card className="p-8">
+            <form onSubmit={handleSubmit} className="space-y-8">
               {errors.general && (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                   <div className="flex">
@@ -250,13 +222,13 @@ export default function CreateOrganizationModal({ isOpen, onClose }: CreateOrgan
               {/* Step 1: Organization Details */}
               {step === 1 && (
                 <div className="space-y-6">
-                  <div className="text-center mb-6">
-                    <div className="text-4xl mb-2">🏢</div>
-                    <h4 className="text-lg font-semibold text-gray-900">Organization Details</h4>
-                    <p className="text-gray-600">Let's start with the basic information about your organization.</p>
+                  <div className="text-center mb-8">
+                    <div className="text-6xl mb-4">🏢</div>
+                    <h2 className="text-2xl font-semibold text-gray-900">Organization Details</h2>
+                    <p className="text-gray-600 mt-2">Let's start with the basic information about your organization.</p>
                   </div>
 
-                  <div className="space-y-4">
+                  <div className="space-y-6">
                     <Input
                       label="Organization Name *"
                       type="text"
@@ -295,17 +267,17 @@ export default function CreateOrganizationModal({ isOpen, onClose }: CreateOrgan
               {/* Step 2: Invite Members */}
               {step === 2 && (
                 <div className="space-y-6">
-                  <div className="text-center mb-6">
-                    <div className="text-4xl mb-2">👥</div>
-                    <h4 className="text-lg font-semibold text-gray-900">Invite Team Members</h4>
-                    <p className="text-gray-600">Invite people to join your organization and assign their roles.</p>
+                  <div className="text-center mb-8">
+                    <div className="text-6xl mb-4">👥</div>
+                    <h2 className="text-2xl font-semibold text-gray-900">Invite Team Members</h2>
+                    <p className="text-gray-600 mt-2">Invite people to join your organization and assign their roles.</p>
                   </div>
 
-                  <div className="space-y-4">
+                  <div className="space-y-6">
                     {members.map((member, idx) => (
-                      <div key={idx} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                        <div className="flex gap-3 items-start">
-                          <div className="flex-1 space-y-3">
+                      <div key={idx} className="bg-gray-50 rounded-lg p-6 border border-gray-200">
+                        <div className="flex gap-4 items-start">
+                          <div className="flex-1 space-y-4">
                             <Input
                               label={`Member ${idx + 1} Email *`}
                               type="email"
@@ -335,7 +307,7 @@ export default function CreateOrganizationModal({ isOpen, onClose }: CreateOrgan
                             <button
                               type="button"
                               onClick={() => handleRemoveMember(idx)}
-                              className="mt-6 p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors"
+                              className="mt-8 p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors"
                             >
                               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -349,7 +321,7 @@ export default function CreateOrganizationModal({ isOpen, onClose }: CreateOrgan
                     <button
                       type="button"
                       onClick={handleAddMember}
-                      className="w-full py-3 px-4 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:text-gray-800 hover:border-gray-400 transition-colors"
+                      className="w-full py-4 px-6 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:text-gray-800 hover:border-gray-400 transition-colors"
                     >
                       <div className="flex items-center justify-center space-x-2">
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -365,19 +337,19 @@ export default function CreateOrganizationModal({ isOpen, onClose }: CreateOrgan
               {/* Step 3: Review & Confirm */}
               {step === 3 && (
                 <div className="space-y-6">
-                  <div className="text-center mb-6">
-                    <div className="text-4xl mb-2">✅</div>
-                    <h4 className="text-lg font-semibold text-gray-900">Review & Create</h4>
-                    <p className="text-gray-600">Please review your organization details before creating.</p>
+                  <div className="text-center mb-8">
+                    <div className="text-6xl mb-4">✅</div>
+                    <h2 className="text-2xl font-semibold text-gray-900">Review & Create</h2>
+                    <p className="text-gray-600 mt-2">Please review your organization details before creating.</p>
                   </div>
 
-                  <Card className="border-2 border-gray-200">
-                    <div className="p-6 space-y-6">
+                  <div className="bg-gray-50 rounded-lg p-6 border-2 border-gray-200">
+                    <div className="space-y-6">
                       <div>
-                        <h5 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
                           <span className="mr-2">🏢</span>
                           Organization Details
-                        </h5>
+                        </h3>
                         <div className="space-y-2">
                           <div className="flex justify-between">
                             <span className="font-medium text-gray-700">Name:</span>
@@ -393,16 +365,16 @@ export default function CreateOrganizationModal({ isOpen, onClose }: CreateOrgan
                       </div>
 
                       <div>
-                        <h5 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
                           <span className="mr-2">👥</span>
                           Team Members ({members.filter(m => m.email.trim()).length})
-                        </h5>
+                        </h3>
                         {members.filter(m => m.email.trim()).length === 0 ? (
                           <p className="text-gray-500 italic">No members to invite</p>
                         ) : (
                           <div className="space-y-2">
                             {members.filter(m => m.email.trim()).map((member, idx) => (
-                              <div key={idx} className="flex justify-between items-center py-2 px-3 bg-gray-50 rounded">
+                              <div key={idx} className="flex justify-between items-center py-2 px-3 bg-white rounded">
                                 <span className="text-gray-900">{member.email}</span>
                                 <span className="text-sm text-gray-600 capitalize">{member.role}</span>
                               </div>
@@ -411,12 +383,12 @@ export default function CreateOrganizationModal({ isOpen, onClose }: CreateOrgan
                         )}
                       </div>
                     </div>
-                  </Card>
+                  </div>
                 </div>
               )}
 
               {/* Navigation buttons */}
-              <div className="flex justify-between pt-6 border-t border-gray-200">
+              <div className="flex justify-between pt-8 border-t border-gray-200">
                 <div>
                   {step > 1 && (
                     <Button
@@ -424,20 +396,20 @@ export default function CreateOrganizationModal({ isOpen, onClose }: CreateOrgan
                       variant="outline"
                       onClick={handleBack}
                       disabled={isSubmitting}
-                      className="px-6 py-3"
+                      className="px-8 py-3"
                     >
                       ← Back
                     </Button>
                   )}
                 </div>
-                <div className="flex space-x-3">
+                <div className="flex space-x-4">
                   {step < 3 ? (
                     <Button
                       type="button"
                       variant="primary"
                       onClick={handleNext}
                       disabled={isSubmitting}
-                      className="px-6 py-3"
+                      className="px-8 py-3"
                     >
                       Next →
                     </Button>
@@ -447,7 +419,7 @@ export default function CreateOrganizationModal({ isOpen, onClose }: CreateOrgan
                       variant="primary"
                       loading={isSubmitting}
                       disabled={isSubmitting}
-                      className="px-8 py-3"
+                      className="px-10 py-3"
                     >
                       {isSubmitting ? 'Creating...' : 'Create Organization'}
                     </Button>
@@ -455,9 +427,9 @@ export default function CreateOrganizationModal({ isOpen, onClose }: CreateOrgan
                 </div>
               </div>
             </form>
-          </div>
+          </Card>
         </div>
-      </div>
-    </div>
+      </DashboardLayout>
+    </ProtectedRoute>
   );
 } 

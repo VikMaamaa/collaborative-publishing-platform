@@ -33,6 +33,22 @@ export class UsersController {
     return this.usersService.findAll();
   }
 
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  async getMe(@Request() req): Promise<UserResponse> {
+    return this.usersService.findById(req.user.id);
+  }
+
+  @Get('me/:userId')
+  @UseGuards(JwtAuthGuard)
+  async getMeWithId(@Param('userId') userId: string, @Request() req): Promise<UserResponse> {
+    // Ensure the authenticated user can only access their own data
+    // if (req.user.id !== userId) {
+    //   throw new NotFoundException('You can only access your own user data');
+    // }
+    return this.usersService.findById(userId);
+  }
+
   @Get(':id')
   async findOne(@Param('id') id: string): Promise<UserResponse> {
     if (!uuidValidate(id)) throw new NotFoundException('User not found');

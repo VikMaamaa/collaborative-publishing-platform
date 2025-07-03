@@ -91,39 +91,27 @@ export default function RegisterForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!validateForm()) {
       return;
     }
-
     try {
       setErrors({});
-      
-      await register({
-        email: formData.email,
-        username: formData.username,
-        password: formData.password,
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-      });
-      
-      // Show success notification
+      await register(formData);
       addNotification({
+        id: Date.now().toString() + Math.random().toString(36).slice(2),
         type: 'success',
-        message: 'Account created successfully!',
+        message: 'Successfully registered!',
         duration: 3000,
       });
-      
-      // Redirect to dashboard on success
       router.push('/dashboard');
+      console.log('Redirecting to /dashboard');
     } catch (error: any) {
-      console.error('Registration error:', error);
+      console.error('Register error:', error);
       setErrors({
         general: error.message || 'Registration failed. Please try again.',
       });
-      
-      // Show error notification
       addNotification({
+        id: Date.now().toString() + Math.random().toString(36).slice(2),
         type: 'error',
         message: error.message || 'Registration failed. Please try again.',
         duration: 5000,

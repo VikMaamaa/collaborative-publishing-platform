@@ -1,9 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { useOrganizationsWithNotifications, useUI } from '@/lib/hooks';
+import { useUI } from '@/lib/hooks';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { loadOrganizationInvitations } from '@/store/organizationsSlice';
 import { Button, Input } from '@/components/ui';
-import { ROLES } from '@/lib/store';
+import { ROLES } from '@/constants/roles';
 
 interface InviteMemberModalProps {
   isOpen: boolean;
@@ -23,7 +25,7 @@ interface FormErrors {
 }
 
 export default function InviteMemberModal({ isOpen, onClose, organizationId }: InviteMemberModalProps) {
-  const { inviteMemberWithNotification } = useOrganizationsWithNotifications();
+  const dispatch = useAppDispatch();
   const { } = useUI();
   
   const [invites, setInvites] = useState([{ email: '', role: ROLES.VIEWER }]);
@@ -58,10 +60,11 @@ export default function InviteMemberModal({ isOpen, onClose, organizationId }: I
     const res: any[] = [];
     for (const [idx, invite] of invites.entries()) {
       try {
-        await inviteMemberWithNotification(organizationId, {
+        await dispatch(loadOrganizationInvitations({
+          orgId: organizationId,
           email: invite.email.trim(),
           role: invite.role as any,
-        });
+        }));
         res.push({ email: invite.email, status: 'success' });
       } catch (error: any) {
         res.push({ email: invite.email, status: 'error', message: error.message });

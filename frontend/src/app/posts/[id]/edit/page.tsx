@@ -2,15 +2,17 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { useAppStore } from "@/lib/store";
 import { useAuth, usePermissions } from "@/lib/hooks";
 import PostEditor from "@/components/posts/PostEditor";
 import { Button, Card, Input, Badge } from "@/components/ui";
+import { useAppSelector, useAppDispatch } from '@/store/hooks';
+import { loadPosts, updatePost, deletePost, setCurrentPost } from '@/store/postsSlice';
 
 const STATUS_OPTIONS = [
   { value: "draft", label: "Draft" },
   { value: "in_review", label: "In Review" },
   { value: "published", label: "Published" },
+  { value: "rejected", label: "Rejected" },
 ];
 
 export default function EditPostPage() {
@@ -18,11 +20,9 @@ export default function EditPostPage() {
   const params = useParams();
   const { user } = useAuth();
   const { hasRole } = usePermissions();
-  const posts = useAppStore((s) => s.posts);
-  const loadPosts = useAppStore((s) => s.loadPosts);
-  const updatePost = useAppStore((s) => s.updatePost);
-  const addNotification = useAppStore((s) => s.addNotification);
-  const deletePost = useAppStore((s) => s.deletePost);
+  const dispatch = useAppDispatch();
+  const posts = useAppSelector((state) => state.posts.posts);
+  const isLoading = useAppSelector((state) => state.posts.isLoading);
   const [post, setPost] = useState<any>(null);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -32,14 +32,13 @@ export default function EditPostPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
-    // Load posts if not already loaded
     if (!posts.length) {
-      loadPosts();
+      dispatch(loadPosts());
     }
-  }, [posts.length, loadPosts]);
+  }, [dispatch, posts.length]);
 
   useEffect(() => {
-    const found = posts.find((p) => p.id === params.id);
+    const found = posts.find((p: any) => p.id === params.id);
     if (found) {
       setPost(found);
       setTitle(found.title);
@@ -48,11 +47,8 @@ export default function EditPostPage() {
     }
   }, [posts, params.id]);
 
-  if (!user) {
-    return <div className="p-8 text-center">Loading...</div>;
-  }
-  if (!post) {
-    return <div className="p-8 text-center">Post not found or loading...</div>;
+  if (isLoading || !post) {
+    return <div>Loading...</div>;
   }
 
   const canEdit =
@@ -64,17 +60,14 @@ export default function EditPostPage() {
   const canApprove = hasRole("editor") && status === "in_review";
   const canPublish = hasRole("editor") && status === "in_review";
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
+  const handleUpdate = async () => {
     setIsSubmitting(true);
+    setError(null);
     try {
-      await updatePost(post.id, { title, content, status });
-      addNotification({ type: "success", message: "Post updated successfully!" });
+      await dispatch(updatePost({ id: post.id, data: { title, content, status } }));
       router.push("/posts");
     } catch (err: any) {
       setError(err.message || "Failed to update post");
-      addNotification({ type: "error", message: err.message || "Failed to update post" });
     } finally {
       setIsSubmitting(false);
     }
@@ -84,13 +77,10 @@ export default function EditPostPage() {
     setIsSubmitting(true);
     setError(null);
     try {
-      await updatePost(post.id, { status: newStatus });
+      await dispatch(updatePost({ id: post.id, data: { status: newStatus } }));
       setStatus(newStatus);
-      addNotification({ type: "success", message: `Post status changed to ${newStatus}` });
-      router.push("/posts");
     } catch (err: any) {
       setError(err.message || "Failed to update status");
-      addNotification({ type: "error", message: err.message || "Failed to update status" });
     } finally {
       setIsSubmitting(false);
     }
@@ -100,12 +90,10 @@ export default function EditPostPage() {
     setIsSubmitting(true);
     setShowDeleteConfirm(false);
     try {
-      await deletePost(post.id);
-      addNotification({ type: "success", message: "Post deleted successfully!" });
+      await dispatch(deletePost(post.id));
       router.push("/posts");
     } catch (err: any) {
       setError(err.message || "Failed to delete post");
-      addNotification({ type: "error", message: err.message || "Failed to delete post" });
     } finally {
       setIsSubmitting(false);
     }
@@ -114,7 +102,7 @@ export default function EditPostPage() {
   return (
     <div className="max-w-2xl mx-auto py-8">
       <Card>
-        <form onSubmit={handleSubmit} className="space-y-6 p-6">
+        <form onSubmit={(e) => { e.preventDefault(); handleUpdate(); }} className="space-y-6 p-6">
           <h1 className="text-2xl font-bold mb-2">Edit Post</h1>
           {error && <div className="bg-red-100 text-red-700 p-2 rounded">{error}</div>}
           <div>

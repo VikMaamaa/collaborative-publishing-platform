@@ -1,12 +1,13 @@
 'use client';
 
-import { useUI, useOrganizations } from '@/lib/hooks';
+import { useUI } from '@/lib/hooks';
+import { useAppSelector } from '@/store/hooks';
 import CreateOrganizationModal from '@/components/organizations/CreateOrganizationModal';
 import InviteMemberModal from '@/components/organizations/InviteMemberModal';
 
 export default function ModalManager() {
   const { modals = { createOrganization: false, inviteMember: false }, closeModal = () => {}, confirmModal = { open: false }, closeConfirmModal = () => {} } = useUI();
-  const { activeOrganization } = useOrganizations();
+  const activeOrganization = useAppSelector(state => state.organizations.activeOrganization);
 
   return (
     <>

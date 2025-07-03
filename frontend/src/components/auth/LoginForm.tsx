@@ -63,6 +63,7 @@ export default function LoginForm() {
       
       // Show success notification
       addNotification({
+        id: Date.now().toString(),
         type: 'success',
         message: 'Successfully logged in!',
         duration: 3000,
@@ -70,6 +71,7 @@ export default function LoginForm() {
       
       // Redirect to dashboard on success
       router.push('/dashboard');
+      console.log('Redirecting to /dashboard');
     } catch (error: any) {
       console.error('Login error:', error);
       setErrors({
@@ -78,6 +80,7 @@ export default function LoginForm() {
       
       // Show error notification
       addNotification({
+        id: Date.now().toString(),
         type: 'error',
         message: error.message || 'Login failed. Please try again.',
         duration: 5000,

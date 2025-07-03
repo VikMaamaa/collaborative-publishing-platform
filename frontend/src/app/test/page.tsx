@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { Input, Button, SkeletonCard } from '@/components/ui';
+import { useAuth } from '@/lib/hooks';
+import { apiClient } from '@/lib/api';
 import DashboardLayout, { 
   DashboardGrid, 
   DashboardCard, 
@@ -11,16 +13,47 @@ import DashboardLayout, {
 export default function TestPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const { user, isAuthenticated, isLoading, hasHydrated, login, logout } = useAuth();
+  const [testResult, setTestResult] = useState('');
+
+  const testAuth = async () => {
+    try {
+      setTestResult('Testing authentication...');
+      const userData = await apiClient.getCurrentUser();
+      setTestResult(`Success! User: ${userData.username} (${userData.email})`);
+    } catch (error: any) {
+      setTestResult(`Error: ${error.message}`);
+    }
+  };
+
+  const testLogin = async () => {
+    try {
+      setTestResult('Testing login...');
+      await login(email, password);
+      setTestResult('Login successful!');
+    } catch (error: any) {
+      setTestResult(`Login error: ${error.message}`);
+    }
+  };
 
   return (
     <DashboardLayout>
       <DashboardSection 
-        title="Test Page"
-        subtitle="Testing input visibility and hydration"
+        title="Auth Test Page"
+        subtitle="Testing authentication and API calls"
       >
         <DashboardGrid>
           <DashboardCard>
             <div className="space-y-4">
+              <h3 className="text-lg font-medium">Auth State</h3>
+              <div className="space-y-2 text-sm">
+                <p>isAuthenticated: {isAuthenticated ? 'true' : 'false'}</p>
+                <p>isLoading: {isLoading ? 'true' : 'false'}</p>
+                <p>hasHydrated: {hasHydrated ? 'true' : 'false'}</p>
+                <p>User: {user ? `${user.username || 'N/A'} (${user.email || 'N/A'})` : 'null'}</p>
+                <p>Token: {localStorage.getItem('access_token') ? 'Present' : 'Missing'}</p>
+              </div>
+
               <Input
                 label="Email address"
                 type="email"
@@ -46,21 +79,38 @@ export default function TestPage() {
                   </svg>
                 }
               />
-            </div>
 
-            <div className="space-y-2 mt-4">
-              <p className="text-sm text-gray-600">Email: {email}</p>
-              <p className="text-sm text-gray-600">Password: {password}</p>
-            </div>
+              <div className="space-y-2">
+                <Button
+                  variant="primary"
+                  onClick={testLogin}
+                  disabled={!email || !password}
+                >
+                  Test Login
+                </Button>
+                
+                <Button
+                  variant="secondary"
+                  onClick={testAuth}
+                  disabled={!isAuthenticated}
+                >
+                  Test Get Current User
+                </Button>
+                
+                <Button
+                  variant="outline"
+                  onClick={logout}
+                >
+                  Logout
+                </Button>
+              </div>
 
-            <Button
-              variant="primary"
-              size="lg"
-              className="w-full mt-4"
-              onClick={() => alert('Test successful!')}
-            >
-              Test Button
-            </Button>
+              {testResult && (
+                <div className="mt-4 p-3 bg-gray-100 rounded">
+                  <p className="text-sm">{testResult}</p>
+                </div>
+              )}
+            </div>
           </DashboardCard>
         </DashboardGrid>
       </DashboardSection>

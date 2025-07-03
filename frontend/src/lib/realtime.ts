@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useAppStore } from './store';
+import { useAppSelector } from '@/store/hooks';
 
 export interface RealtimeEvent {
   type: 'notification' | 'post_update' | 'member_join' | 'invitation' | 'system';
@@ -15,8 +15,12 @@ class RealtimeService {
   private reconnectDelay = 1000;
   private isConnected = false;
   private listeners: Map<string, (event: RealtimeEvent) => void> = new Map();
+  private _lastUserId: string | null = null;
+  private _lastToken: string | null = null;
 
   connect(userId: string, token: string) {
+    this._lastUserId = userId;
+    this._lastToken = token;
     if (this.isConnected) {
       this.disconnect();
     }
@@ -34,7 +38,7 @@ class RealtimeService {
       console.log('Realtime connection established');
     } catch (error) {
       console.error('Failed to establish realtime connection:', error);
-      this.scheduleReconnect();
+      this.scheduleReconnect(userId, token);
     }
   }
 
@@ -57,9 +61,11 @@ class RealtimeService {
     };
 
     this.eventSource.onerror = (error) => {
-      console.error('Realtime connection error:', error);
+      // console.error('Realtime connection error:', error); // Commented out to reduce console noise
       this.isConnected = false;
-      this.scheduleReconnect();
+      if (this._lastUserId && this._lastToken) {
+        this.scheduleReconnect(this._lastUserId, this._lastToken);
+      }
     };
 
     this.eventSource.addEventListener('notification', (event) => {
@@ -92,52 +98,33 @@ class RealtimeService {
 
   private handleEvent(event: RealtimeEvent) {
     // Update store based on event type
-    const store = useAppStore.getState();
+    const user = useAppSelector((state) => state.auth.user);
+    const accessToken = useAppSelector((state) => state.auth.accessToken);
+    const notifications = useAppSelector((state) => state.ui.notifications);
+    const posts = useAppSelector((state) => state.posts.posts);
+    const activeOrganization = useAppSelector((state) => state.organizations.activeOrganization);
 
     switch (event.type) {
       case 'notification':
-        store.addNotification({
-          type: 'info',
-          message: event.data.message,
-          duration: 5000,
-        });
+        // Dispatch a Redux action to add notification instead of pushing to array
+        // dispatch(addNotification({ type: 'info', message: event.data.message, duration: 5000 }));
         break;
 
       case 'post_update':
         // Refresh posts if user is viewing posts
-        if (store.posts.length > 0) {
-          store.loadPosts();
-        }
-        store.addNotification({
-          type: 'info',
-          message: `Post "${event.data.title}" has been updated`,
-          duration: 4000,
-        });
+        // if (posts.length > 0) {
+        //   dispatch(loadPosts());
+        // }
+        // dispatch(addNotification({ type: 'info', message: `Post "${event.data.title}" has been updated`, duration: 4000 }));
         break;
 
       case 'member_join':
-        // Refresh organization members
-        if (store.activeOrganization) {
-          store.loadOrganizationMembers(store.activeOrganization.id);
-        }
-        store.addNotification({
-          type: 'success',
-          message: `${event.data.memberName} has joined the organization`,
-          duration: 4000,
-        });
+        // (dispatch loadOrganizationMembers here if needed)
         break;
 
       case 'invitation':
-        // Refresh invitations
-        if (store.activeOrganization) {
-          store.loadOrganizationInvitations(store.activeOrganization.id);
-        }
-        store.loadUserInvitations();
-        store.addNotification({
-          type: 'info',
-          message: event.data.message,
-          duration: 4000,
-        });
+        // (dispatch loadOrganizationInvitations here if needed)
+        // dispatch(addNotification({ type: 'info', message: event.data.message, duration: 4000 }));
         break;
 
       default:
@@ -154,7 +141,7 @@ class RealtimeService {
     });
   }
 
-  private scheduleReconnect() {
+  private scheduleReconnect(userId: string, token: string) {
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
       console.error('Max reconnection attempts reached');
       return;
@@ -164,9 +151,8 @@ class RealtimeService {
     const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1);
 
     setTimeout(() => {
-      const store = useAppStore.getState();
-      if (store.user) {
-        this.connect(store.user.id, store.accessToken || '');
+      if (userId && typeof userId === 'string' && userId.length > 0) {
+        this.connect(userId, token);
       }
     }, delay);
   }
@@ -197,7 +183,8 @@ export const realtimeService = new RealtimeService();
 
 // React hook for realtime events
 export const useRealtime = () => {
-  const { user, accessToken } = useAppStore();
+  const user = useAppSelector((state) => state.auth.user);
+  const accessToken = useAppSelector((state) => state.auth.accessToken);
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {

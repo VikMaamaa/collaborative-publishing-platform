@@ -1,22 +1,81 @@
-import { useState } from 'react';
-import { useAppStore, PERMISSIONS, ROLES } from './store';
+"use client";
+import { useState, useEffect, useCallback } from 'react';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { loginStart, loginSuccess, loginFailure, logout as logoutAction, setUser, setIsAuthenticated, setIsLoading } from '@/store/authSlice';
+import React from 'react';
 import { apiClient } from './api';
+import { addNotification as addNotificationAction, removeNotification as removeNotificationAction, clearNotifications as clearNotificationsAction, openModal, closeModal, openConfirmModal, closeConfirmModal, setConfirmModalLoading } from '@/store/uiSlice';
+import type { Notification } from '@/store/uiSlice';
+import type { RootState } from '@/store/store';
 
 // Auth hooks
 export const useAuth = () => {
-  const user = useAppStore(state => state.user);
-  const isAuthenticated = useAppStore(state => state.isAuthenticated);
-  const isLoading = useAppStore(state => state.isLoading);
-  const login = useAppStore(state => state.login);
-  const register = useAppStore(state => state.register);
-  const logout = useAppStore(state => state.logout);
-  const refreshUser = useAppStore(state => state.refreshUser);
-  const updateUser = useAppStore(state => state.updateUser);
+  const dispatch = useAppDispatch();
+  const user = useAppSelector(state => state.auth.user);
+  const isAuthenticated = useAppSelector(state => state.auth.isAuthenticated);
+  const isLoading = useAppSelector(state => state.auth.isLoading);
+  const accessToken = useAppSelector(state => state.auth.accessToken);
+  const hasHydrated = useAppSelector(state => state.auth.hasHydrated);
+
+  // Ensure we have a valid authentication state after hydration
+  const effectiveIsAuthenticated = hasHydrated ? isAuthenticated : false;
+  const effectiveIsLoading = !hasHydrated || isLoading;
+
+  const login = useCallback(async (email: string, password: string) => {
+    dispatch(loginStart());
+    try {
+      const response = await apiClient.login({ email, password });
+      dispatch(loginSuccess({ user: response.user, accessToken: response.access_token }));
+      apiClient.setToken(response.access_token);
+    } catch (error) {
+      dispatch(loginFailure());
+      throw error;
+    }
+  }, [dispatch]);
+
+  const register = useCallback(async (userData: any) => {
+    dispatch(loginStart());
+    try {
+      const response = await apiClient.register(userData);
+      dispatch(loginSuccess({ user: response.user, accessToken: response.access_token }));
+      apiClient.setToken(response.access_token);
+    } catch (error) {
+      dispatch(loginFailure());
+      throw error;
+    }
+  }, [dispatch]);
+
+  const logout = useCallback(() => {
+    dispatch(logoutAction());
+    apiClient.clearAuth();
+  }, [dispatch]);
+
+  const refreshUser = useCallback(async () => {
+    try {
+      // Use the current user's ID if available, otherwise fallback to /me endpoint
+      const userData = await apiClient.getCurrentUser(user?.id || undefined);
+      dispatch(setUser(userData));
+    } catch (error) {
+      dispatch(logoutAction());
+      throw error;
+    }
+  }, [dispatch, user?.id]);
+
+  const updateUser = useCallback(async (userData: any) => {
+    try {
+      const updatedUser = await apiClient.updateUser(user.id, userData);
+      dispatch(setUser(updatedUser));
+    } catch (error) {
+      throw error;
+    }
+  }, [dispatch, user]);
 
   return {
     user,
-    isAuthenticated,
-    isLoading,
+    isAuthenticated: effectiveIsAuthenticated,
+    isLoading: effectiveIsLoading,
+    accessToken,
+    hasHydrated,
     login,
     register,
     logout,
@@ -25,399 +84,98 @@ export const useAuth = () => {
   };
 };
 
-// Organization hooks
-export const useOrganizations = () => {
-  const organizations = useAppStore(state => state.organizations);
-  const activeOrganization = useAppStore(state => state.activeOrganization);
-  const organizationMembers = useAppStore(state => state.organizationMembers);
-  const userRole = useAppStore(state => state.userRole);
-  const userPermissions = useAppStore(state => state.userPermissions);
-  
-  // Invitation state
-  const organizationInvitations = useAppStore(state => state.organizationInvitations);
-  const userInvitations = useAppStore(state => state.userInvitations);
-  const isLoadingInvitations = useAppStore(state => state.isLoadingInvitations);
-  
-  const setActiveOrganization = useAppStore(state => state.setActiveOrganization);
-  const loadOrganizations = useAppStore(state => state.loadOrganizations);
-  const createOrganization = useAppStore(state => state.createOrganization);
-  const updateOrganization = useAppStore(state => state.updateOrganization);
-  const deleteOrganization = useAppStore(state => state.deleteOrganization);
-  const loadOrganizationMembers = useAppStore(state => state.loadOrganizationMembers);
-  const inviteMember = useAppStore(state => state.inviteMember);
-  const updateMemberRole = useAppStore(state => state.updateMemberRole);
-  const removeMember = useAppStore(state => state.removeMember);
-  
-  // Invitation actions
-  const loadOrganizationInvitations = useAppStore(state => state.loadOrganizationInvitations);
-  const createInvitation = useAppStore(state => state.createInvitation);
-  const resendInvitation = useAppStore(state => state.resendInvitation);
-  const cancelInvitation = useAppStore(state => state.cancelInvitation);
-  const loadUserInvitations = useAppStore(state => state.loadUserInvitations);
-  const acceptInvitation = useAppStore(state => state.acceptInvitation);
-
-  return {
-    organizations,
-    activeOrganization,
-    organizationMembers,
-    userRole,
-    userPermissions,
-    organizationInvitations,
-    userInvitations,
-    isLoadingInvitations,
-    setActiveOrganization,
-    loadOrganizations,
-    createOrganization,
-    updateOrganization,
-    deleteOrganization,
-    loadOrganizationMembers,
-    inviteMember,
-    updateMemberRole,
-    removeMember,
-    loadOrganizationInvitations,
-    createInvitation,
-    resendInvitation,
-    cancelInvitation,
-    loadUserInvitations,
-    acceptInvitation,
-  };
-};
-
-// Enhanced Organization hooks with notifications
-export const useOrganizationsWithNotifications = () => {
-  const organizations = useOrganizations();
-  const ui = useUI();
-
-  const createOrganizationWithNotification = async (data: any) => {
-    try {
-      await organizations.createOrganization(data);
-      ui.addNotification({
-        type: 'success',
-        message: 'Organization created successfully!',
-        duration: 4000,
-      });
-    } catch (error) {
-      ui.addNotification({
-        type: 'error',
-        message: 'Failed to create organization. Please try again.',
-        duration: 4000,
-      });
-      throw error;
-    }
-  };
-
-  const deleteOrganizationWithConfirmation = (organizationId: string, organizationName: string) => {
-    ui.openConfirmModal({
-      title: 'Delete Organization',
-      message: `Are you sure you want to delete "${organizationName}"? This action cannot be undone and will remove all data for this organization.`,
-      confirmLabel: 'Delete',
-      cancelLabel: 'Cancel',
-      onConfirm: async () => {
-        try {
-          await organizations.deleteOrganization(organizationId);
-          ui.addNotification({
-            type: 'success',
-            message: `Organization "${organizationName}" deleted successfully`,
-            duration: 4000,
-          });
-        } catch (error) {
-          ui.addNotification({
-            type: 'error',
-            message: 'Failed to delete organization. Please try again.',
-            duration: 4000,
-          });
-        }
-      },
-    });
-  };
-
-  const inviteMemberWithNotification = async (organizationId: string, invitationData: any) => {
-    try {
-      await organizations.createInvitation(organizationId, invitationData);
-      ui.addNotification({
-        type: 'success',
-        message: 'Invitation sent successfully!',
-        duration: 4000,
-      });
-    } catch (error) {
-      ui.addNotification({
-        type: 'error',
-        message: 'Failed to send invitation. Please try again.',
-        duration: 4000,
-      });
-      throw error;
-    }
-  };
-
-  const resendInvitationWithNotification = async (organizationId: string, invitationId: string) => {
-    try {
-      await organizations.resendInvitation(organizationId, invitationId);
-      ui.addNotification({
-        type: 'success',
-        message: 'Invitation resent successfully!',
-        duration: 4000,
-      });
-    } catch (error) {
-      ui.addNotification({
-        type: 'error',
-        message: 'Failed to resend invitation. Please try again.',
-        duration: 4000,
-      });
-      throw error;
-    }
-  };
-
-  const cancelInvitationWithConfirmation = (organizationId: string, invitationId: string, email: string) => {
-    ui.openConfirmModal({
-      title: 'Cancel Invitation',
-      message: `Are you sure you want to cancel the invitation for ${email}?`,
-      confirmLabel: 'Cancel Invitation',
-      cancelLabel: 'Keep Invitation',
-      onConfirm: async () => {
-        try {
-          await organizations.cancelInvitation(organizationId, invitationId);
-          ui.addNotification({
-            type: 'success',
-            message: 'Invitation cancelled successfully',
-            duration: 4000,
-          });
-        } catch (error) {
-          ui.addNotification({
-            type: 'error',
-            message: 'Failed to cancel invitation. Please try again.',
-            duration: 4000,
-          });
-        }
-      },
-    });
-  };
-
-  const acceptInvitationWithNotification = async (token: string) => {
-    try {
-      await organizations.acceptInvitation(token);
-      ui.addNotification({
-        type: 'success',
-        message: 'Invitation accepted successfully! Welcome to the organization.',
-        duration: 4000,
-      });
-    } catch (error) {
-      ui.addNotification({
-        type: 'error',
-        message: 'Failed to accept invitation. Please try again.',
-        duration: 4000,
-      });
-      throw error;
-    }
-  };
-
-  const removeMemberWithConfirmation = (organizationId: string, memberId: string, memberName: string) => {
-    ui.openConfirmModal({
-      title: 'Remove Member',
-      message: `Are you sure you want to remove ${memberName} from the organization?`,
-      confirmLabel: 'Remove',
-      cancelLabel: 'Cancel',
-      onConfirm: async () => {
-        try {
-          await organizations.removeMember(organizationId, memberId);
-          ui.addNotification({
-            type: 'success',
-            message: `${memberName} has been removed from the organization`,
-            duration: 4000,
-          });
-        } catch (error) {
-          ui.addNotification({
-            type: 'error',
-            message: 'Failed to remove member. Please try again.',
-            duration: 4000,
-          });
-        }
-      },
-    });
-  };
-
-  return {
-    ...organizations,
-    createOrganizationWithNotification,
-    deleteOrganizationWithConfirmation,
-    inviteMemberWithNotification,
-    resendInvitationWithNotification,
-    cancelInvitationWithConfirmation,
-    acceptInvitationWithNotification,
-    removeMemberWithConfirmation,
-  };
-};
-
 // Post hooks
-export const usePosts = () => {
-  const posts = useAppStore(state => state.posts);
-  const currentPost = useAppStore(state => state.currentPost);
-  const isLoading = useAppStore(state => state.isLoading);
-  
-  const loadPosts = useAppStore(state => state.loadPosts);
-  const createPost = useAppStore(state => state.createPost);
-  const updatePost = useAppStore(state => state.updatePost);
-  const deletePost = useAppStore(state => state.deletePost);
-  const setCurrentPost = useAppStore(state => state.setCurrentPost);
-
-  return {
-    posts,
-    currentPost,
-    isLoading,
-    loadPosts,
-    createPost,
-    updatePost,
-    deletePost,
-    setCurrentPost,
-  };
-};
-
-// Enhanced Post hooks with notifications
-export const usePostsWithNotifications = () => {
-  const posts = usePosts();
-  const ui = useUI();
-
-  const createPostWithNotification = async (data: any) => {
-    try {
-      await posts.createPost(data);
-      ui.addNotification({
-        type: 'success',
-        message: 'Post created successfully!',
-        duration: 4000,
-      });
-    } catch (error) {
-      ui.addNotification({
-        type: 'error',
-        message: 'Failed to create post. Please try again.',
-        duration: 4000,
-      });
-      throw error;
-    }
-  };
-
-  const updatePostWithNotification = async (postId: string, data: any) => {
-    try {
-      await posts.updatePost(postId, data);
-      ui.addNotification({
-        type: 'success',
-        message: 'Post updated successfully!',
-        duration: 4000,
-      });
-    } catch (error) {
-      ui.addNotification({
-        type: 'error',
-        message: 'Failed to update post. Please try again.',
-        duration: 4000,
-      });
-      throw error;
-    }
-  };
-
-  const deletePostWithConfirmation = (postId: string, postTitle: string) => {
-    ui.openConfirmModal({
-      title: 'Delete Post',
-      message: `Are you sure you want to delete "${postTitle}"? This action cannot be undone.`,
-      confirmLabel: 'Delete',
-      cancelLabel: 'Cancel',
-      onConfirm: async () => {
-        try {
-          await posts.deletePost(postId);
-          ui.addNotification({
-            type: 'success',
-            message: 'Post deleted successfully',
-            duration: 4000,
-          });
-        } catch (error) {
-          ui.addNotification({
-            type: 'error',
-            message: 'Failed to delete post. Please try again.',
-            duration: 4000,
-          });
-        }
-      },
-    });
-  };
-
-  return {
-    ...posts,
-    createPostWithNotification,
-    updatePostWithNotification,
-    deletePostWithConfirmation,
-  };
-};
+// export const usePosts = () => {
+//   const posts = useAppSelector(state => state.posts);
+//   const currentPost = useAppSelector(state => state.currentPost);
+//   const isLoading = useAppSelector(state => state.isLoading);
+//   
+//   const loadPosts = useAppSelector(state => state.loadPosts);
+//   const createPost = useAppSelector(state => state.createPost);
+//   const updatePost = useAppSelector(state => state.updatePost);
+//   const deletePost = useAppSelector(state => state.deletePost);
+//   const setCurrentPost = useAppSelector(state => state.setCurrentPost);
+//
+//   return {
+//     posts,
+//     currentPost,
+//     isLoading,
+//     loadPosts,
+//     createPost,
+//     updatePost,
+//     deletePost,
+//     setCurrentPost,
+//   };
+// };
 
 // UI hooks
 export const useUI = () => {
-  const sidebarOpen = useAppStore(state => state.sidebarOpen);
-  const theme = useAppStore(state => state.theme);
-  const notifications = useAppStore(state => state.notifications);
-  const modals = useAppStore(state => state.modals);
-  
-  const toggleSidebar = useAppStore(state => state.toggleSidebar);
-  const setTheme = useAppStore(state => state.setTheme);
-  const addNotification = useAppStore(state => state.addNotification);
-  const removeNotification = useAppStore(state => state.removeNotification);
-  const clearNotifications = useAppStore(state => state.clearNotifications);
-  const openModal = useAppStore(state => state.openModal);
-  const closeModal = useAppStore(state => state.closeModal);
-  const openConfirmModal = useAppStore(state => state.openConfirmModal);
-  const closeConfirmModal = useAppStore(state => state.closeConfirmModal);
-
+  const notifications = useAppSelector((state: RootState) => state.ui.notifications);
+  const modals = useAppSelector((state: RootState) => state.ui.modals);
+  const confirmModal = useAppSelector((state: RootState) => state.ui.confirmModal);
+  const dispatch = useAppDispatch();
   return {
-    sidebarOpen,
-    theme,
     notifications,
     modals,
-    toggleSidebar,
-    setTheme,
-    addNotification,
-    removeNotification,
-    clearNotifications,
-    openModal,
-    closeModal,
-    openConfirmModal,
-    closeConfirmModal,
+    confirmModal,
+    addNotification: (notification: Notification) => dispatch(addNotificationAction(notification)),
+    removeNotification: (id: string) => dispatch(removeNotificationAction(id)),
+    clearNotifications: () => dispatch(clearNotificationsAction()),
+    openModal: (modal: 'createOrganization' | 'inviteMember') => dispatch(openModal(modal)),
+    closeModal: (modal: 'createOrganization' | 'inviteMember') => dispatch(closeModal(modal)),
+    openConfirmModal: (payload: Omit<RootState['ui']['confirmModal'], 'open'> & { onConfirm?: () => void }) => dispatch(openConfirmModal(payload)),
+    closeConfirmModal: () => dispatch(closeConfirmModal()),
+    setConfirmModalLoading: (loading: boolean) => dispatch(setConfirmModalLoading(loading)),
   };
 };
 
 // Permission hooks
 export const usePermissions = () => {
-  const hasPermission = useAppStore(state => state.hasPermission);
-  const hasRole = useAppStore(state => state.hasRole);
-  const userRole = useAppStore(state => state.userRole);
-
+  const user = useAppSelector((state: RootState) => state.auth.user);
+  const activeOrganization = useAppSelector((state: RootState) => state.organizations.activeOrganization);
+  // Try to get members from activeOrganization.members, fallback to []
+  const members = activeOrganization?.members || [];
+  // Find the current user's membership in the active org
+  const currentMembership = user && members.find((m: any) => m.userId === user.id);
+  const userRole = currentMembership?.role || 'viewer';
+  const hasRole = (role: string) => userRole === role;
+  const canInviteMembers = () => userRole === 'owner' || userRole === 'editor';
   return {
-    hasPermission,
-    hasRole,
     userRole,
-    // Convenience methods for common permissions
-    canCreatePost: () => hasPermission(PERMISSIONS.POST_CREATE),
-    canReadPost: () => hasPermission(PERMISSIONS.POST_READ),
-    canUpdatePost: () => hasPermission(PERMISSIONS.POST_UPDATE),
-    canDeletePost: () => hasPermission(PERMISSIONS.POST_DELETE),
-    canPublishPost: () => hasPermission(PERMISSIONS.POST_PUBLISH),
-    canManageOrg: () => hasPermission(PERMISSIONS.ORG_MANAGE),
-    canManageMembers: () => hasPermission(PERMISSIONS.ORG_MEMBERS),
-    canInviteMembers: () => hasPermission(PERMISSIONS.ORG_MEMBERS),
-    canManageSettings: () => hasPermission(PERMISSIONS.ORG_SETTINGS),
-    canManageUsers: () => hasPermission(PERMISSIONS.USER_MANAGE),
-    canManageProfile: () => hasPermission(PERMISSIONS.USER_PROFILE),
-    // Role checks
-    isOwner: () => hasRole(ROLES.OWNER),
-    isEditor: () => hasRole(ROLES.EDITOR),
-    isWriter: () => hasRole(ROLES.WRITER),
-    isViewer: () => hasRole(ROLES.VIEWER),
+    hasRole,
+    canInviteMembers,
   };
 };
 
 // App initialization hook
 export const useAppInitialization = () => {
-  const initializeApp = useAppStore(state => state.initializeApp);
-  const isLoading = useAppStore(state => state.isLoading);
+  const dispatch = useAppDispatch();
+  const accessToken = useAppSelector(state => state.auth.accessToken);
 
-  return {
-    initializeApp,
-    isLoading,
-  };
+  React.useEffect(() => {
+    const initialize = async () => {
+      dispatch(setIsLoading(true));
+      const token = accessToken || localStorage.getItem('access_token');
+      if (token) {
+        apiClient.setToken(token);
+        try {
+          const userData = await apiClient.getCurrentUser();
+          dispatch(setUser(userData));
+          dispatch(setIsAuthenticated(true));
+        } catch (e) {
+          dispatch(setUser(null));
+          dispatch(setIsAuthenticated(false));
+          localStorage.removeItem('access_token');
+        }
+      } else {
+        dispatch(setUser(null));
+        dispatch(setIsAuthenticated(false));
+      }
+      dispatch(setIsLoading(false));
+    };
+    initialize();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 };
 
 // Search hooks
@@ -484,20 +242,56 @@ export const useSearch = () => {
 };
 
 // Combined hook for all state
-export const useAppState = () => {
-  const auth = useAuth();
-  const organizations = useOrganizations();
-  const posts = usePosts();
-  const ui = useUI();
-  const permissions = usePermissions();
-  const appInit = useAppInitialization();
+// export const useAppState = () => {
+//   const auth = useAuth();
+//   const posts = usePosts();
+//   const ui = useUI();
+//   const permissions = usePermissions();
+//   const appInit = useAppInitialization();
+//
+//   return {
+//     ...auth,
+//     ...posts,
+//     ...ui,
+//     ...permissions,
+//     ...appInit,
+//   };
+// };
 
-  return {
-    ...auth,
-    ...organizations,
-    ...posts,
-    ...ui,
-    ...permissions,
-    ...appInit,
-  };
-}; 
+export function useAuthInitialization() {
+  const dispatch = useAppDispatch();
+  const accessToken = useAppSelector(state => state.auth.accessToken);
+  const hasHydrated = useAppSelector(state => state.auth.hasHydrated);
+
+  React.useEffect(() => {
+    if (!hasHydrated) return; // Wait for hydration before initializing
+
+    const initialize = async () => {
+      console.log('Auth initialization starting...');
+      dispatch(setIsLoading(true));
+      const token = accessToken || localStorage.getItem('access_token');
+      console.log('Token found:', !!token);
+      
+      if (token) {
+        apiClient.setToken(token);
+        try {
+          // During initialization, always use the /me endpoint first
+          console.log('Calling getCurrentUser...');
+          const userData = await apiClient.getCurrentUser();
+          console.log('User data received:', userData);
+          dispatch(setUser(userData));
+          dispatch(setIsAuthenticated(true));
+        } catch (e) {
+          console.error('Auth initialization error:', e);
+          // Only set to false if we're sure the token is invalid
+          dispatch(setUser(null));
+          dispatch(setIsAuthenticated(false));
+          localStorage.removeItem('access_token');
+        }
+      }
+      dispatch(setIsLoading(false));
+    };
+    initialize();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasHydrated]); // Only depend on hasHydrated
+} 

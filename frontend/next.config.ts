@@ -4,9 +4,6 @@ const nextConfig: NextConfig = {
   // Enable React strict mode for better development experience
   reactStrictMode: true,
   
-  // Enable SWC minification for faster builds
-  swcMinify: true,
-  
   // Image optimization
   images: {
     domains: ['localhost', 'your-production-domain.com'],
@@ -122,11 +119,7 @@ const nextConfig: NextConfig = {
   // Redirects for better UX
   async redirects() {
     return [
-      {
-        source: '/dashboard',
-        destination: '/',
-        permanent: true,
-      },
+      // Removed the problematic dashboard redirect
     ];
   },
   

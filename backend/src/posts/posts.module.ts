@@ -3,7 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Post } from './post.entity';
 import { OrganizationMember } from '../organizations/organization-member.entity';
 import { PostsService } from './posts.service';
-import { PostsController } from './posts.controller';
+import { PostsController, StandalonePostsController } from './posts.controller';
 import { OrganizationGuard } from '../auth/guards/organization.guard';
 import { TransactionService } from '../common/services/transaction.service';
 import { QueuesModule } from '../queues/queues.module';
@@ -19,7 +19,7 @@ import { RealtimeModule } from '../realtime/realtime.module';
     OrganizationsModule,
     RealtimeModule,
   ],
-  controllers: [PostsController],
+  controllers: [PostsController, StandalonePostsController],
   providers: [PostsService, OrganizationGuard, TransactionService],
   exports: [PostsService],
 })

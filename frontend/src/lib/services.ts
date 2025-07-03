@@ -58,9 +58,9 @@ export class AuthService extends BaseService {
     }
   }
 
-  async getCurrentUser(): Promise<User> {
+  async getCurrentUser(userId?: string): Promise<User> {
     try {
-      return await apiClient.getCurrentUser();
+      return await apiClient.getCurrentUser(userId);
     } catch (error) {
       this.handleError(error, 'Failed to get current user');
     }

@@ -1,8 +1,9 @@
 'use client';
 
-import { useOrganizationsWithNotifications, useUI, usePermissions } from '@/lib/hooks';
+import { useAppDispatch } from '@/store/hooks';
+import { useUI, usePermissions } from '@/lib/hooks';
 import { Button, Card, Badge, SkeletonList } from '@/components/ui';
-import { ROLES } from '@/lib/store';
+import { ROLES } from '@/constants/roles';
 import React, { useState } from 'react';
 import InvitationList from './InvitationList';
 
@@ -12,7 +13,7 @@ export default function OrganizationMembers() {
     organizationMembers, 
     updateMemberRole, 
     removeMemberWithConfirmation 
-  } = useOrganizationsWithNotifications();
+  } = useAppDispatch();
   const { openModal } = useUI();
   const { canInviteMembers, hasRole, userRole } = usePermissions();
 

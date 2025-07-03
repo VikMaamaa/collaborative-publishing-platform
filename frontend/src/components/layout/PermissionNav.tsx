@@ -1,7 +1,8 @@
 'use client';
 
 import { usePermissions, useAuth } from '@/lib/hooks';
-import { ROLES, PERMISSIONS } from '@/lib/store';
+import { ROLES } from '@/constants/roles';
+import { PERMISSIONS } from '@/constants/permissions';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 

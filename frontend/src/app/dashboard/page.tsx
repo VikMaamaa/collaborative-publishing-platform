@@ -1,7 +1,7 @@
 'use client';
 
+import React from 'react';
 import { useAuth } from '@/lib/hooks';
-import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { Button } from '@/components/ui';
 import { useRouter } from 'next/navigation';
 import UserInvitations from '@/components/auth/UserInvitations';
@@ -16,8 +16,10 @@ import SEOHead, { SEOConfigs } from '@/components/seo/SEOHead';
 import { usePerformanceMonitor } from '@/lib/performance';
 import { LazyComponent } from '@/components/lazy/LazyComponents';
 import { useEffect } from 'react';
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
 
 export default function DashboardPage() {
+  console.log('DashboardPage rendered');
   const { user, logout } = useAuth();
   const router = useRouter();
   const { trackComponentRender, mark, measure } = usePerformanceMonitor();
@@ -44,9 +46,9 @@ export default function DashboardPage() {
   };
 
   return (
-    <>
-      <SEOHead {...SEOConfigs.dashboard} />
-      <ProtectedRoute>
+    <ProtectedRoute>
+      <>
+        <SEOHead {...SEOConfigs.dashboard} />
         <DashboardLayout>
           <DashboardSection 
             title="Welcome to your Dashboard"
@@ -175,7 +177,7 @@ export default function DashboardPage() {
             </DashboardSection>
           </DashboardSection>
         </DashboardLayout>
-      </ProtectedRoute>
-    </>
+      </>
+    </ProtectedRoute>
   );
 } 

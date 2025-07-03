@@ -1,5 +1,3 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { NotificationContainer, ErrorBoundary } from "@/components/ui";
 import ModalManager from "@/components/modals/ModalManager";
@@ -7,19 +5,11 @@ import RealtimeProvider from "@/components/providers/RealtimeProvider";
 import SEOHead, { SEOConfigs } from "@/components/seo/SEOHead";
 import { basicPerformanceMonitor as performanceMonitor } from "@/lib/performance";
 import { LazyComponent } from "@/components/lazy/LazyComponents";
-import { AuthProvider } from '@/contexts/AuthContext';
+import ClientRoot from "@/components/ClientRoot";
+import type { Metadata } from "next";
+import ReduxProvider from './redux-provider';
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-  display: 'swap', // Optimize font loading
-});
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-  display: 'swap', // Optimize font loading
-});
 
 export const metadata: Metadata = {
   title: "Collaborative Publishing Platform",
@@ -69,23 +59,25 @@ export default function RootLayout({
         <link rel="preload" href="/globals.css" as="style" />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className="antialiased"
         suppressHydrationWarning={true}
       >
-        <AuthProvider>
+        <ReduxProvider>
           <ErrorBoundary>
-            {children}
-            <LazyComponent>
-              <NotificationContainer />
-            </LazyComponent>
-            <LazyComponent>
-              <ModalManager />
-            </LazyComponent>
-            <LazyComponent>
-              <RealtimeProvider />
-            </LazyComponent>
+            <ClientRoot>
+              {children}
+              <LazyComponent>
+                <NotificationContainer />
+              </LazyComponent>
+              <LazyComponent>
+                <ModalManager />
+              </LazyComponent>
+              <LazyComponent>
+                <RealtimeProvider />
+              </LazyComponent>
+            </ClientRoot>
           </ErrorBoundary>
-        </AuthProvider>
+        </ReduxProvider>
       </body>
     </html>
   );

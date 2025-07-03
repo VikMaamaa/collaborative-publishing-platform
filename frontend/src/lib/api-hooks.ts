@@ -111,8 +111,8 @@ export function useLogout() {
 }
 
 // User hooks
-export function useCurrentUser() {
-  return useApi(() => apiClient.getCurrentUser(), [], false);
+export function useCurrentUser(userId?: string) {
+  return useApi(() => apiClient.getCurrentUser(userId), [userId], false);
 }
 
 export function useUpdateUser() {

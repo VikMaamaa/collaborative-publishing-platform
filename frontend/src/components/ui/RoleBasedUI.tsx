@@ -2,7 +2,8 @@
 
 import React from 'react';
 import { usePermissions } from '@/lib/hooks';
-import { ROLES, PERMISSIONS } from '@/lib/store';
+import { ROLES } from '@/constants/roles';
+import { PERMISSIONS } from '@/constants/permissions';
 import { Button, Badge } from './index';
 
 interface RoleBasedButtonProps {

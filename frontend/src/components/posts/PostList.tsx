@@ -1,6 +1,9 @@
+'use client';
+
 import React from 'react';
 import { useState, useEffect } from "react";
-import { useAppStore } from "@/lib/store";
+import { useAppSelector, useAppDispatch } from '@/store/hooks';
+import { loadPosts, createPost, updatePost, deletePost, setCurrentPost } from '@/store/postsSlice';
 import { usePermissions, usePosts, useUI, useAuth } from "@/lib/hooks";
 import { Card, Badge, Button } from "@/components/ui";
 import { useRouter } from "next/navigation";
@@ -15,25 +18,25 @@ const STATUS_OPTIONS = [
 export default function PostList({ posts: propPosts }: { posts?: any[] }) {
   const router = useRouter();
   const { hasPermission, hasRole, userRole } = usePermissions();
-  const storePosts = useAppStore((s) => s.posts);
-  const loadPosts = useAppStore((s) => s.loadPosts);
+  const storePosts = useAppSelector((state) => state.posts.posts);
+  const dispatch = useAppDispatch();
   const [statusFilter, setStatusFilter] = useState("all");
   const [loading, setLoading] = useState(false);
-  const { deletePost } = usePosts();
-  const { addNotification, openConfirmModal } = useUI();
+  const { deletePost: postsDeletePost } = usePosts();
+  const { addNotification } = useUI();
   const { user } = useAuth();
 
-  // Use propPosts if provided, otherwise use storePosts
-  const posts = propPosts || storePosts;
+  // Use propPosts if provided, otherwise use storePosts, ensure it's always an array
+  const posts = (propPosts || storePosts || []);
 
   useEffect(() => {
     if (!propPosts) {
       setLoading(true);
-      loadPosts()
+      dispatch(loadPosts())
         .catch(() => {})
         .finally(() => setLoading(false));
     }
-  }, [loadPosts, propPosts]);
+  }, [dispatch, propPosts]);
 
   const filteredPosts = posts.filter((post) =>
     statusFilter === "all" ? true : post.status === statusFilter
@@ -48,28 +51,25 @@ export default function PostList({ posts: propPosts }: { posts?: any[] }) {
   };
 
   const handleDelete = (post: any) => {
-    openConfirmModal({
-      title: 'Delete Post',
-      message: `Are you sure you want to delete "${post.title}"? This action cannot be undone.`,
-      confirmLabel: 'Delete',
-      cancelLabel: 'Cancel',
-      onConfirm: async () => {
-        try {
-          await deletePost(post.id);
+    if (window.confirm(`Are you sure you want to delete "${post.title}"? This action cannot be undone.`)) {
+      postsDeletePost(post.id)
+        .then(() => {
           addNotification({
+            id: Date.now().toString() + Math.random().toString(36).slice(2),
             type: 'success',
             message: `Post "${post.title}" deleted successfully`,
             duration: 4000,
           });
-        } catch (error: any) {
+        })
+        .catch((error: any) => {
           addNotification({
+            id: Date.now().toString() + Math.random().toString(36).slice(2),
             type: 'error',
             message: error.message || 'Failed to delete post',
             duration: 4000,
           });
-        }
-      },
-    });
+        });
+    }
   };
 
   return (
