@@ -101,6 +101,8 @@ export class PostListResponse {
   organizationId: string;
   createdAt: Date;
   updatedAt: Date;
+  content: string;
+  rejectionReason?: string;
   author?: {
     id: string;
     email: string;

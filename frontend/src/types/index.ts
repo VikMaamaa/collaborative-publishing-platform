@@ -22,7 +22,7 @@ export interface OrganizationMember {
   id: string;
   userId: string;
   organizationId: string;
-  role: 'owner' | 'admin' | 'member' | 'viewer';
+  role: 'owner' | 'editor' | 'writer' | 'viewer';
   createdAt: string;
   updatedAt: string;
   user?: User;
@@ -57,7 +57,10 @@ export interface Post {
   title: string;
   content: string;
   excerpt?: string;
-  status: 'draft' | 'published' | 'archived';
+  status: 'draft' | 'in_review' | 'published' | 'rejected';
+  rejectionReason?: string;
+  publishedAt?: string;
+  isPublic: boolean;
   authorId: string;
   organizationId: string;
   createdAt: string;

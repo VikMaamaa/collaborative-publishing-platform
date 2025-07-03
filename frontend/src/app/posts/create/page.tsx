@@ -3,7 +3,7 @@
 import React from "react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth, usePermissions } from "@/lib/hooks";
+import { useAuth, usePermissions, useUI } from "@/lib/hooks";
 import { useAppSelector, useAppDispatch } from '@/store/hooks';
 import { createPost } from '@/store/postsSlice';
 import PostEditor from "@/components/posts/PostEditor";
@@ -14,13 +14,13 @@ export default function CreatePostPage() {
   const router = useRouter();
   const { user } = useAuth();
   const { hasRole } = usePermissions();
+  const { addNotification } = useUI();
   const dispatch = useAppDispatch();
   const activeOrganization = useAppSelector(state => state.organizations.activeOrganization);
 
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   if (!user) {
     return (
@@ -48,7 +48,6 @@ export default function CreatePostPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
     setIsSubmitting(true);
     try {
       await dispatch(createPost({
@@ -56,9 +55,21 @@ export default function CreatePostPage() {
         content,
         organizationId: activeOrganization.id,
       }));
+      addNotification({
+        id: Date.now().toString(),
+        type: 'success',
+        message: 'Post created successfully!',
+        duration: 3000,
+      });
       router.push("/posts");
     } catch (err: any) {
-      setError(err.message || "Failed to create post");
+      const errorMessage = err.message || "Failed to create post";
+      addNotification({
+        id: Date.now().toString(),
+        type: 'error',
+        message: errorMessage,
+        duration: 5000,
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -70,7 +81,6 @@ export default function CreatePostPage() {
         <Card>
           <form onSubmit={handleSubmit} className="space-y-6 p-6">
             <h1 className="text-2xl font-bold mb-2">Create New Post</h1>
-            {error && <div className="bg-red-100 text-red-700 p-2 rounded">{error}</div>}
             <div>
               <Input
                 label="Title"

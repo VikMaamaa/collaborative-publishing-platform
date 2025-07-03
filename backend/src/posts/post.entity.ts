@@ -79,13 +79,15 @@ export class Post {
 
   // Methods
   canBeEditedBy(userId: string, userRole: string): boolean {
-    // Authors can always edit their own posts (except published)
+    // Editors and owners can edit any post in their organization (including published)
+    if (userRole === 'editor' || userRole === 'owner') {
+      return true;
+    }
+    // Authors can edit their own posts (except published)
     if (this.authorId === userId) {
       return this.status !== PostStatus.PUBLISHED;
     }
-
-    // Editors and owners can edit any post in their organization
-    return userRole === 'editor' || userRole === 'owner';
+    return false;
   }
 
   canBePublishedBy(userRole: string): boolean {

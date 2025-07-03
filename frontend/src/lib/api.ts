@@ -276,7 +276,7 @@ class ApiClient {
 
   async updateUser(userId: string, userData: Partial<User>): Promise<User> {
     return this.request<User>(`/users/${userId}`, {
-      method: 'PATCH',
+      method: 'PUT',
       body: JSON.stringify(userData),
     });
   }
@@ -437,6 +437,10 @@ class ApiClient {
     return this.request<void>(`/organizations/${organizationId}/posts/${postId}`, {
       method: 'DELETE',
     });
+  }
+
+  async getPostInOrganization(orgId: string, postId: string): Promise<Post> {
+    return this.request<Post>(`/organizations/${orgId}/posts/${postId}`);
   }
 
   // Invitation endpoints

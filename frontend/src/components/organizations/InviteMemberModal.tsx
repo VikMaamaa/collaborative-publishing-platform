@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useUI } from '@/lib/hooks';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { loadOrganizationInvitations } from '@/store/organizationsSlice';
+import { inviteMember } from '@/store/organizationsSlice';
 import { Button, Input } from '@/components/ui';
 import { ROLES } from '@/constants/roles';
 
@@ -60,8 +60,8 @@ export default function InviteMemberModal({ isOpen, onClose, organizationId }: I
     const res: any[] = [];
     for (const [idx, invite] of invites.entries()) {
       try {
-        await dispatch(loadOrganizationInvitations({
-          orgId: organizationId,
+        await dispatch(inviteMember({
+          organizationId,
           email: invite.email.trim(),
           role: invite.role as any,
         }));

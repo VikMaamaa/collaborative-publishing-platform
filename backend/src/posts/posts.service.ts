@@ -165,19 +165,37 @@ export class PostsService {
         throw new ForbiddenException('You are not a member of this organization');
       }
 
-      // Published posts cannot be edited
-      if (post.status === PostStatus.PUBLISHED) {
-        throw new ConflictException('Published posts cannot be edited');
-      }
-
       // Check if user can edit this post
       if (!post.canBeEditedBy(userId, member.role)) {
         throw new ForbiddenException('You cannot edit this post');
       }
 
-      console.log('Updating post:', { postId, updateDto, currentStatus: post.status });
-      Object.assign(post, updateDto);
-      console.log('Post after update:', { newStatus: post.status });
+      // For published posts, only allow specific updates for editors and owners
+      if (post.status === PostStatus.PUBLISHED) {
+        const isEditorOrOwner = member.role === OrganizationRole.EDITOR || member.role === OrganizationRole.OWNER;
+        const isReviewUpdate = updateDto.rejectionReason !== undefined;
+        const isStatusUpdate = updateDto.status !== undefined;
+        
+        // Allow editors/owners to update review feedback and status on published posts
+        if (isEditorOrOwner && (isReviewUpdate || isStatusUpdate)) {
+          // Only allow these specific fields to be updated
+          if (isReviewUpdate) {
+            post.rejectionReason = updateDto.rejectionReason;
+          }
+          if (isStatusUpdate) {
+            post.status = updateDto.status;
+          }
+          // Don't allow other fields to be updated on published posts
+        } else {
+          throw new ConflictException('Published posts cannot be edited except for review feedback and status by editors/owners');
+        }
+      } else {
+        // For non-published posts, allow full updates
+        console.log('Updating post:', { postId, updateDto, currentStatus: post.status });
+        Object.assign(post, updateDto);
+        console.log('Post after update:', { newStatus: post.status });
+      }
+
       const updatedPost = await entityManager.save(Post, post);
       // Realtime notification
       this.realtimeService.sendPostUpdate(userId, updatedPost.title, { postId: updatedPost.id, action: 'updated' });
@@ -461,6 +479,8 @@ export class PostsService {
       organizationId: post.organizationId,
       createdAt: post.createdAt,
       updatedAt: post.updatedAt,
+      content: post.content,
+      rejectionReason: post.rejectionReason,
       author: post.author ? {
         id: post.author.id,
         email: post.author.email,

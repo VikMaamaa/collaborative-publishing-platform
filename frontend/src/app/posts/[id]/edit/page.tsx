@@ -2,11 +2,12 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { useAuth, usePermissions } from "@/lib/hooks";
+import { useAuth, usePermissions, useUI } from "@/lib/hooks";
 import PostEditor from "@/components/posts/PostEditor";
 import { Button, Card, Input, Badge } from "@/components/ui";
 import { useAppSelector, useAppDispatch } from '@/store/hooks';
 import { loadPosts, updatePost, deletePost, setCurrentPost } from '@/store/postsSlice';
+import { apiClient } from '@/lib/api';
 
 const STATUS_OPTIONS = [
   { value: "draft", label: "Draft" },
@@ -20,6 +21,7 @@ export default function EditPostPage() {
   const params = useParams();
   const { user } = useAuth();
   const { hasRole, userRole } = usePermissions();
+  const { addNotification } = useUI();
   const dispatch = useAppDispatch();
   const posts = useAppSelector((state) => state.posts.posts);
   const isLoading = useAppSelector((state) => state.posts.isLoading);
@@ -30,8 +32,33 @@ export default function EditPostPage() {
   const [status, setStatus] = useState("draft");
   const [review, setReview] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isLoadingPost, setIsLoadingPost] = useState(false);
+
+  // Function to load a specific post if not found in store
+  const loadSpecificPost = async (orgId: string, postId: string) => {
+    try {
+      setIsLoadingPost(true);
+      const fetchedPost = await apiClient.getPostInOrganization(orgId, postId);
+      console.log('DEBUG: API response for post:', fetchedPost);
+      setPost(fetchedPost);
+      setTitle(fetchedPost.title);
+      setContent(fetchedPost.content);
+      setStatus(fetchedPost.status);
+      setReview(fetchedPost.rejectionReason || "");
+      console.log('Set review to:', fetchedPost.rejectionReason || "");
+    } catch (error: any) {
+      console.error('Error loading post:', error);
+      addNotification({
+        id: Date.now().toString(),
+        type: 'error',
+        message: error.message || 'Failed to load post',
+        duration: 5000,
+      });
+    } finally {
+      setIsLoadingPost(false);
+    }
+  };
 
   useEffect(() => {
     if (!posts.length) {
@@ -42,16 +69,51 @@ export default function EditPostPage() {
   useEffect(() => {
     const found = posts.find((p: any) => p.id === params.id);
     if (found) {
+      console.log('Found post data:', found);
       setPost(found);
       setTitle(found.title);
       setContent(found.content);
       setStatus(found.status);
-      setReview((found as any).rejectionReason || "");
+      setReview(found.rejectionReason || "");
+      console.log('Set review to:', found.rejectionReason || "");
+    } else if (posts.length > 0 && !isLoadingPost && activeOrganization) {
+      // Post not found in store, but posts are loaded - try to load it directly
+      console.log('Post not found in store, trying to load directly');
+      loadSpecificPost(activeOrganization.id, params.id as string);
     }
-  }, [posts, params.id]);
+  }, [posts, params.id, isLoadingPost, activeOrganization]);
 
-  if (isLoading || !post) {
-    return <div>Loading...</div>;
+  // Load specific post if no posts are loaded yet (direct navigation)
+  useEffect(() => {
+    if (!posts.length && !isLoading && !isLoadingPost && params.id && activeOrganization) {
+      console.log('No posts loaded, loading specific post directly');
+      loadSpecificPost(activeOrganization.id, params.id as string);
+    }
+  }, [posts.length, isLoading, isLoadingPost, params.id, activeOrganization]);
+
+  if (isLoading || isLoadingPost || !post) {
+    return (
+      <div className="max-w-2xl mx-auto py-8">
+        <div className="text-center">
+          {isLoading || isLoadingPost ? (
+            <div>
+              <p className="text-lg mb-4">Loading post...</p>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+            </div>
+          ) : (
+            <div>
+              <p className="text-lg mb-4">Post not found</p>
+              <button 
+                onClick={() => router.push('/posts')}
+                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+              >
+                Back to Posts
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
   }
 
   const canEdit =
@@ -59,6 +121,7 @@ export default function EditPostPage() {
     hasRole("editor") ||
     (hasRole("writer") && post.status !== "published" && post.authorId === user?.id);
 
+  const canEditPublished = (hasRole("editor") || hasRole("owner")) && post.status === "published";
   const canEditReview = hasRole("owner") || hasRole("editor");
   const canSubmit = hasRole("writer") && status === "draft";
   const canApprove = hasRole("editor") && status === "in_review";
@@ -103,25 +166,67 @@ export default function EditPostPage() {
 
   const handleUpdate = async () => {
     if (!activeOrganization) {
-      setError("No active organization selected");
+      addNotification({
+        id: Date.now().toString(),
+        type: 'error',
+        message: 'No active organization selected. Please select an organization first.',
+        duration: 5000,
+      });
       return;
     }
     setIsSubmitting(true);
-    setError(null);
     try {
-      const updateData: any = { title, content, status };
-      if (canEditReview && review) {
-        updateData.rejectionReason = review;
+      let updateData: any = {};
+      
+      // For published posts, only allow specific updates for editors and owners
+      if (post.status === "published") {
+        const isEditorOrOwner = hasRole("editor") || hasRole("owner");
+        if (isEditorOrOwner) {
+          // Only allow rejectionReason and status updates on published posts
+          if (canEditReview && review !== undefined) {
+            updateData.rejectionReason = review;
+          }
+          if (status !== post.status) {
+            updateData.status = status;
+          }
+        } else {
+          addNotification({
+            id: Date.now().toString(),
+            type: 'error',
+            message: 'Published posts cannot be edited except by editors and owners',
+            duration: 5000,
+          });
+          return;
+        }
+      } else {
+        // For non-published posts, allow all fields
+        updateData = { title, content, status };
+        if (canEditReview && review) {
+          updateData.rejectionReason = review;
+        }
       }
+      
       console.log('Sending update data:', updateData);
       await dispatch(updatePost({ 
         id: post.id, 
         organizationId: activeOrganization.id,
         data: updateData
       }));
+      addNotification({
+        id: Date.now().toString(),
+        type: 'success',
+        message: 'Post updated successfully!',
+        duration: 3000,
+      });
       router.push("/posts");
     } catch (err: any) {
-      setError(err.message || "Failed to update post");
+      const errorMessage = err.message || "Failed to update post";
+      addNotification({
+        id: Date.now().toString(),
+        type: 'error',
+        message: errorMessage,
+        duration: 5000,
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -129,11 +234,15 @@ export default function EditPostPage() {
 
   const handleStatusChange = async (newStatus: string) => {
     if (!activeOrganization) {
-      setError("No active organization selected");
+      addNotification({
+        id: Date.now().toString(),
+        type: 'error',
+        message: 'No active organization selected. Please select an organization first.',
+        duration: 5000,
+      });
       return;
     }
     setIsSubmitting(true);
-    setError(null);
     try {
       await dispatch(updatePost({ 
         id: post.id, 
@@ -141,8 +250,20 @@ export default function EditPostPage() {
         data: { status: newStatus } 
       }));
       setStatus(newStatus);
+      addNotification({
+        id: Date.now().toString(),
+        type: 'success',
+        message: `Post status updated to ${newStatus.replace('_', ' ')}`,
+        duration: 3000,
+      });
     } catch (err: any) {
-      setError(err.message || "Failed to update status");
+      const errorMessage = err.message || "Failed to update status";
+      addNotification({
+        id: Date.now().toString(),
+        type: 'error',
+        message: errorMessage,
+        duration: 5000,
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -150,16 +271,33 @@ export default function EditPostPage() {
 
   const handleDelete = async () => {
     if (!activeOrganization) {
-      setError("No active organization selected");
+      addNotification({
+        id: Date.now().toString(),
+        type: 'error',
+        message: 'No active organization selected. Please select an organization first.',
+        duration: 5000,
+      });
       return;
     }
     setIsSubmitting(true);
     setShowDeleteConfirm(false);
     try {
       await dispatch(deletePost({ id: post.id, organizationId: activeOrganization.id }));
+      addNotification({
+        id: Date.now().toString(),
+        type: 'success',
+        message: 'Post deleted successfully!',
+        duration: 3000,
+      });
       router.push("/posts");
     } catch (err: any) {
-      setError(err.message || "Failed to delete post");
+      const errorMessage = err.message || "Failed to delete post";
+      addNotification({
+        id: Date.now().toString(),
+        type: 'error',
+        message: errorMessage,
+        duration: 5000,
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -170,7 +308,6 @@ export default function EditPostPage() {
       <Card>
         <form onSubmit={(e) => { e.preventDefault(); handleUpdate(); }} className="space-y-6 p-6">
           <h1 className="text-2xl font-bold mb-2">Edit Post</h1>
-          {error && <div className="bg-red-100 text-red-700 p-2 rounded">{error}</div>}
           <div className="bg-blue-100 text-blue-700 p-2 rounded">
             <strong>Current User Info:</strong>
             <br />
@@ -199,14 +336,19 @@ export default function EditPostPage() {
               {hasRole("writer") && post.authorId !== user?.id && (
                 <div>• As a WRITER, you can only edit your own posts</div>
               )}
-              {post.status === "published" && (
-                <div>• Published posts cannot be edited</div>
+              {post.status === "published" && !canEditPublished && (
+                <div>• Published posts can only be edited by editors and owners (for review feedback and status changes)</div>
               )}
             </div>
           )}
           {!canEditReview && (
             <div className="bg-yellow-100 text-yellow-700 p-2 rounded">
               <strong>Review Field:</strong> Only Editors and Owners can edit the review/feedback field.
+            </div>
+          )}
+          {post.status === "published" && canEditPublished && (
+            <div className="bg-green-100 text-green-700 p-2 rounded">
+              <strong>Published Post:</strong> As an editor/owner, you can update the review feedback and change the status of this published post.
             </div>
           )}
           <div>
@@ -216,44 +358,49 @@ export default function EditPostPage() {
               onChange={(e) => setTitle(e.target.value)}
               required
               placeholder="Enter post title"
-              disabled={!canEdit}
+              disabled={!canEdit || canEditPublished}
             />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Content</label>
-            <PostEditor value={content} onChange={setContent} editable={canEdit} placeholder="Write your post..." />
+            <PostEditor 
+              value={content} 
+              onChange={setContent} 
+              editable={canEdit && !canEditPublished} 
+              placeholder="Write your post..." 
+            />
           </div>
-                      <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value)}
-                className="w-full border rounded p-2"
-                disabled={!canEdit}
-              >
-                {getStatusOptions().map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-              <div className="mt-2">
-                <Badge variant={status === "published" ? "success" : status === "in_review" ? "primary" : "secondary"}>{status}</Badge>
-              </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+              className="w-full border rounded p-2"
+              disabled={!canEdit}
+            >
+              {getStatusOptions().map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+            <div className="mt-2">
+              <Badge variant={status === "published" ? "success" : status === "in_review" ? "primary" : "secondary"}>{status}</Badge>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Review/Feedback {!canEditReview && "(Read-only)"}
-              </label>
-              <textarea
-                value={review}
-                onChange={(e) => setReview(e.target.value)}
-                className="w-full border rounded p-2 min-h-[100px]"
-                placeholder={canEditReview ? "Enter review feedback..." : "No review feedback available"}
-                disabled={!canEditReview}
-                readOnly={!canEditReview}
-              />
-            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Review/Feedback {!canEditReview && "(Read-only)"}
+            </label>
+            <textarea
+              value={review}
+              onChange={(e) => setReview(e.target.value)}
+              className="w-full border rounded p-2 min-h-[100px]"
+              placeholder={canEditReview ? "Enter review feedback..." : "No review feedback available"}
+              disabled={!canEditReview}
+              readOnly={!canEditReview}
+            />
+          </div>
           <div className="flex gap-4 flex-wrap">
             {canEdit && (
               <Button type="submit" variant="primary" disabled={isSubmitting}>

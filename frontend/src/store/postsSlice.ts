@@ -71,6 +71,18 @@ export const deletePost = createAsyncThunk<string, { id: string; organizationId:
   }
 );
 
+function normalizePost(post: any): Post {
+  return {
+    ...post,
+    content: post.content ?? '',
+    rejectionReason: post.rejectionReason ?? '',
+  };
+}
+
+function normalizePosts(posts: any[]): Post[] {
+  return posts.map(normalizePost);
+}
+
 const postsSlice = createSlice({
   name: 'posts',
   initialState,
@@ -87,19 +99,24 @@ const postsSlice = createSlice({
       })
       .addCase(loadPosts.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.posts = action.payload;
+        state.posts = normalizePosts(action.payload);
       })
       .addCase(loadPosts.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload as string | null;
       })
       .addCase(createPost.fulfilled, (state, action) => {
-        state.posts.push(action.payload);
+        state.posts.push(normalizePost(action.payload));
       })
       .addCase(updatePost.fulfilled, (state, action) => {
-        state.posts = state.posts.map(post => post.id === action.payload.id ? action.payload : post);
+        state.posts = state.posts.map(post => {
+          if (post.id === action.payload.id) {
+            return normalizePost({ ...post, ...action.payload });
+          }
+          return post;
+        });
         if (state.currentPost && state.currentPost.id === action.payload.id) {
-          state.currentPost = action.payload;
+          state.currentPost = normalizePost({ ...state.currentPost, ...action.payload });
         }
       })
       .addCase(deletePost.fulfilled, (state, action) => {
