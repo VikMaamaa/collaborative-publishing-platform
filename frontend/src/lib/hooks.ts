@@ -113,11 +113,25 @@ export const usePosts = () => {
     createPost: (data: any) => dispatch(createPost(data)),
     updatePost: (id: any, data: any) => {
       if (id !== undefined && data !== undefined) {
-        return dispatch(updatePost({ id, data }));
+        // We need to get the organizationId from the active organization
+        const state = (dispatch as any).getState();
+        const activeOrganization = state.organizations.activeOrganization;
+        if (!activeOrganization) {
+          throw new Error('No active organization selected');
+        }
+        return dispatch(updatePost({ id, organizationId: activeOrganization.id, data }));
       }
       return undefined;
     },
-    deletePost: (id: any) => dispatch(deletePost(id)),
+    deletePost: (id: any) => {
+      // We need to get the organizationId from the active organization
+      const state = (dispatch as any).getState();
+      const activeOrganization = state.organizations.activeOrganization;
+      if (!activeOrganization) {
+        throw new Error('No active organization selected');
+      }
+      return dispatch(deletePost({ id, organizationId: activeOrganization.id }));
+    },
     setCurrentPost: (post: any) => dispatch(setCurrentPost(post)),
   };
 };

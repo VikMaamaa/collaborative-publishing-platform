@@ -7,23 +7,18 @@ import { useAuth, usePermissions } from "@/lib/hooks";
 import { useAppSelector, useAppDispatch } from '@/store/hooks';
 import { createPost } from '@/store/postsSlice';
 import PostEditor from "@/components/posts/PostEditor";
-import { Button, Card, Input, Badge } from "@/components/ui";
+import { Button, Card, Input } from "@/components/ui";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
-
-const STATUS_OPTIONS = [
-  { value: "draft", label: "Draft" },
-  { value: "in_review", label: "Submit for Review" },
-];
 
 export default function CreatePostPage() {
   const router = useRouter();
   const { user } = useAuth();
   const { hasRole } = usePermissions();
   const dispatch = useAppDispatch();
+  const activeOrganization = useAppSelector(state => state.organizations.activeOrganization);
 
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  const [status, setStatus] = useState("draft");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -31,6 +26,22 @@ export default function CreatePostPage() {
     return (
       <ProtectedRoute>
         <div className="p-8 text-center">Loading...</div>
+      </ProtectedRoute>
+    );
+  }
+
+  if (!activeOrganization) {
+    return (
+      <ProtectedRoute>
+        <div className="p-8 text-center">
+          <p>No active organization selected. Please select an organization first.</p>
+          <button 
+            onClick={() => router.push('/organizations')}
+            className="mt-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          >
+            Go to Organizations
+          </button>
+        </div>
       </ProtectedRoute>
     );
   }
@@ -43,8 +54,7 @@ export default function CreatePostPage() {
       await dispatch(createPost({
         title,
         content,
-        status,
-        organizationId: user.organizationMembers?.[0]?.organizationId, // or select active org
+        organizationId: activeOrganization.id,
       }));
       router.push("/posts");
     } catch (err: any) {
@@ -74,26 +84,9 @@ export default function CreatePostPage() {
               <label className="block text-sm font-medium text-gray-700 mb-1">Content</label>
               <PostEditor value={content} onChange={setContent} placeholder="Write your post..." />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value)}
-                className="w-full border rounded p-2"
-              >
-                {STATUS_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-              <div className="mt-2">
-                <Badge variant={status === "draft" ? "secondary" : "primary"}>{status}</Badge>
-              </div>
-            </div>
             <div className="flex gap-4">
               <Button type="submit" variant="primary" disabled={isSubmitting}>
-                {status === "draft" ? "Save as Draft" : "Submit for Review"}
+                Save as Draft
               </Button>
               <Button type="button" variant="outline" onClick={() => router.push("/posts")}>Cancel</Button>
             </div>

@@ -174,7 +174,7 @@ export class PostsController {
   }
 
   @Put(':postId')
-  @RequireRole(OrganizationRole.WRITER)
+  @RequireRole(OrganizationRole.WRITER, OrganizationRole.EDITOR, OrganizationRole.OWNER)
   async updatePost(
     @Param('id', ParseUUIDPipe) organizationId: string,
     @Param('postId', ParseUUIDPipe) postId: string,
@@ -185,7 +185,7 @@ export class PostsController {
   }
 
   @Delete(':postId')
-  @RequireRole(OrganizationRole.WRITER)
+  @RequireRole(OrganizationRole.WRITER, OrganizationRole.EDITOR, OrganizationRole.OWNER)
   async deletePost(
     @Param('id', ParseUUIDPipe) organizationId: string,
     @Param('postId', ParseUUIDPipe) postId: string,
@@ -206,7 +206,7 @@ export class PostsController {
   }
 
   @Post(':postId/review')
-  @RequireRole(OrganizationRole.EDITOR)
+  @RequireRole(OrganizationRole.EDITOR, OrganizationRole.OWNER)
   async reviewPost(
     @Param('id', ParseUUIDPipe) organizationId: string,
     @Param('postId', ParseUUIDPipe) postId: string,

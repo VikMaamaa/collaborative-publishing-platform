@@ -37,6 +37,14 @@ export class UpdatePostDto {
   @IsOptional()
   @IsBoolean()
   isPublic?: boolean;
+
+  @IsOptional()
+  @IsEnum(PostStatus)
+  status?: PostStatus;
+
+  @IsOptional()
+  @IsString()
+  rejectionReason?: string;
 }
 
 export class SubmitForReviewDto {

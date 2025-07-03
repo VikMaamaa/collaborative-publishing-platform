@@ -17,8 +17,9 @@ const STATUS_OPTIONS = [
 
 export default function PostList({ posts: propPosts }: { posts?: any[] }) {
   const router = useRouter();
-  const { hasPermission, hasRole, userRole } = usePermissions();
+  const { hasRole, userRole } = usePermissions();
   const storePosts = useAppSelector((state) => state.posts.posts);
+  const activeOrganization = useAppSelector((state) => state.organizations.activeOrganization);
   const dispatch = useAppDispatch();
   const [statusFilter, setStatusFilter] = useState("all");
   const [loading, setLoading] = useState(false);
@@ -30,13 +31,13 @@ export default function PostList({ posts: propPosts }: { posts?: any[] }) {
   const posts = (propPosts || storePosts || []);
 
   useEffect(() => {
-    if (!propPosts) {
+    if (!propPosts && activeOrganization) {
       setLoading(true);
-      dispatch(loadPosts())
+      dispatch(loadPosts(activeOrganization.id))
         .catch(() => {})
         .finally(() => setLoading(false));
     }
-  }, [dispatch, propPosts]);
+  }, [dispatch, propPosts, activeOrganization]);
 
   const filteredPosts = posts.filter((post) =>
     statusFilter === "all" ? true : post.status === statusFilter
@@ -71,6 +72,20 @@ export default function PostList({ posts: propPosts }: { posts?: any[] }) {
         });
     }
   };
+
+  if (!activeOrganization) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-gray-500 mb-4">No active organization selected.</p>
+        <button 
+          onClick={() => router.push('/organizations')}
+          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+        >
+          Select Organization
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -121,24 +136,25 @@ export default function PostList({ posts: propPosts }: { posts?: any[] }) {
                       </Badge>
                     </td>
                     <td className="py-2 flex gap-2">
-                      {/* Edit: Writers can edit their own drafts/in_review, Editors can edit any */}
-                      {(hasRole("owner") || hasRole("editor") || (hasRole("writer") && post.status !== "published")) && (
+                      {/* Edit: Writers can edit their own unpublished posts, Editors/Owners can edit any unpublished */}
+                      {(hasRole("owner") || hasRole("editor") || (hasRole("writer") && post.status !== "published" && post.authorId === user?.id)) && (
                         <Button size="sm" variant="outline" onClick={() => handleEdit(post.id)}>
                           Edit
                         </Button>
                       )}
-                      {/* Approve/Publish: Editors only, in_review status */}
-                      {hasRole("editor") && post.status === "in_review" && (
+                      {/* Submit for Review: Writers only, draft status, own posts */}
+                      {hasRole("writer") && post.status === "draft" && post.authorId === user?.id && (
+                        <Button size="sm" variant="primary">
+                          Submit for Review
+                        </Button>
+                      )}
+                      {/* Approve/Publish: Editors/Owners only, in_review status */}
+                      {(hasRole("editor") || hasRole("owner")) && post.status === "in_review" && (
                         <Button size="sm" variant="primary">
                           Approve
                         </Button>
                       )}
-                      {/* Submit: Writers only, draft status */}
-                      {hasRole("writer") && post.status === "draft" && (
-                        <Button size="sm" variant="primary">
-                          Submit
-                        </Button>
-                      )}
+                      {/* Delete: Authors can delete their own unpublished posts, Editors/Owners can delete any */}
                       {(hasRole("owner") || hasRole("editor") || (hasRole("writer") && post.status !== "published" && post.authorId === user?.id)) && (
                         <Button size="sm" variant="danger" onClick={() => handleDelete(post)}>
                           Delete

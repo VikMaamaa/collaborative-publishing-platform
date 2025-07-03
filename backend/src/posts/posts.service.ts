@@ -175,7 +175,9 @@ export class PostsService {
         throw new ForbiddenException('You cannot edit this post');
       }
 
+      console.log('Updating post:', { postId, updateDto, currentStatus: post.status });
       Object.assign(post, updateDto);
+      console.log('Post after update:', { newStatus: post.status });
       const updatedPost = await entityManager.save(Post, post);
       // Realtime notification
       this.realtimeService.sendPostUpdate(userId, updatedPost.title, { postId: updatedPost.id, action: 'updated' });

@@ -1,5 +1,5 @@
 import { Roles } from './roles.decorator';
 
-export function RequireRole(role: string) {
-  return Roles(role);
+export function RequireRole(...roles: string[]) {
+  return Roles(...roles);
 } 

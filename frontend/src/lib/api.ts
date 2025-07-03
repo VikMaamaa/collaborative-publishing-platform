@@ -373,6 +373,12 @@ class ApiClient {
     limit?: number;
     search?: string;
   }): Promise<PaginatedResponse<Post>> {
+    if (params?.organizationId) {
+      // Use organization-specific endpoint
+      const { organizationId, ...otherParams } = params;
+      return this.request<PaginatedResponse<Post>>(`/organizations/${organizationId}/posts`, { params: otherParams });
+    }
+    // Use standalone endpoint for all posts
     return this.request<PaginatedResponse<Post>>('/posts', { params });
   }
 
@@ -384,23 +390,51 @@ class ApiClient {
     title: string; 
     content: string; 
     organizationId: string; 
-    status?: string 
+    excerpt?: string;
+    isPublic?: boolean;
   }): Promise<Post> {
-    return this.request<Post>('/posts', {
+    // Only send allowed fields to the backend
+    const { organizationId, ...allowedFields } = postData;
+    return this.request<Post>(`/organizations/${organizationId}/posts`, {
       method: 'POST',
-      body: JSON.stringify(postData),
+      body: JSON.stringify(allowedFields),
     });
   }
 
   async updatePost(postId: string, postData: Partial<Post>): Promise<Post> {
-    return this.request<Post>(`/posts/${postId}`, {
-      method: 'PATCH',
-      body: JSON.stringify(postData),
+    // We need the organizationId to update a post
+    // For now, we'll need to get it from the post data or pass it separately
+    // This is a limitation of the current API design
+    throw new Error('Post update requires organizationId. Please use the organization-specific endpoint.');
+  }
+
+  async updatePostInOrganization(organizationId: string, postId: string, postData: Partial<Post>): Promise<Post> {
+    // Only send allowed fields to the backend
+    const allowedFields: any = {};
+    if (postData.title !== undefined) allowedFields.title = postData.title;
+    if (postData.content !== undefined) allowedFields.content = postData.content;
+    if (postData.excerpt !== undefined) allowedFields.excerpt = postData.excerpt;
+    if ((postData as any).isPublic !== undefined) allowedFields.isPublic = (postData as any).isPublic;
+    if ((postData as any).status !== undefined) allowedFields.status = (postData as any).status;
+    if ((postData as any).rejectionReason !== undefined) allowedFields.rejectionReason = (postData as any).rejectionReason;
+    
+    console.log('API Client - Sending update data:', allowedFields);
+    
+    return this.request<Post>(`/organizations/${organizationId}/posts/${postId}`, {
+      method: 'PUT',
+      body: JSON.stringify(allowedFields),
     });
   }
 
   async deletePost(postId: string): Promise<void> {
-    return this.request<void>(`/posts/${postId}`, {
+    // We need the organizationId to delete a post
+    // For now, we'll need to get it from the post data or pass it separately
+    // This is a limitation of the current API design
+    throw new Error('Post deletion requires organizationId. Please use the organization-specific endpoint.');
+  }
+
+  async deletePostInOrganization(organizationId: string, postId: string): Promise<void> {
+    return this.request<void>(`/organizations/${organizationId}/posts/${postId}`, {
       method: 'DELETE',
     });
   }

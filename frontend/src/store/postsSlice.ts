@@ -45,13 +45,13 @@ export const createPost = createAsyncThunk<Post, any>(
   }
 );
 
-export type UpdatePostArg = { id: string; data: any };
+export type UpdatePostArg = { id: string; organizationId: string; data: any };
 
 export const updatePost = createAsyncThunk<Post, UpdatePostArg>(
   'posts/updatePost',
-  async ({ id, data }, thunkAPI) => {
+  async ({ id, organizationId, data }, thunkAPI) => {
     try {
-      const updatedPost = await apiClient.updatePost(id, data);
+      const updatedPost = await apiClient.updatePostInOrganization(organizationId, id, data);
       return updatedPost as Post;
     } catch (error) {
       return thunkAPI.rejectWithValue((error as Error).message);
@@ -59,11 +59,11 @@ export const updatePost = createAsyncThunk<Post, UpdatePostArg>(
   }
 );
 
-export const deletePost = createAsyncThunk<string, string>(
+export const deletePost = createAsyncThunk<string, { id: string; organizationId: string }>(
   'posts/deletePost',
-  async (id, thunkAPI) => {
+  async ({ id, organizationId }, thunkAPI) => {
     try {
-      await apiClient.deletePost(id);
+      await apiClient.deletePostInOrganization(organizationId, id);
       return id;
     } catch (error) {
       return thunkAPI.rejectWithValue((error as Error).message);
