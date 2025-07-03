@@ -136,8 +136,12 @@ export default function PostList({ posts: propPosts }: { posts?: any[] }) {
                       </Badge>
                     </td>
                     <td className="py-2 flex gap-2">
-                      {/* Edit: Writers can edit their own unpublished posts, Editors/Owners can edit any unpublished */}
-                      {(hasRole("owner") || hasRole("editor") || (hasRole("writer") && post.status !== "published" && post.authorId === user?.id)) && (
+                      {/* Edit: Editors/Owners can edit any post, Writers can edit their own (not published) */}
+                      {(
+                        hasRole("owner") ||
+                        hasRole("editor") ||
+                        (hasRole("writer") && post.authorId === user?.id && post.status !== "published")
+                      ) && (
                         <Button size="sm" variant="outline" onClick={() => handleEdit(post.id)}>
                           Edit
                         </Button>

@@ -117,6 +117,8 @@ export default function OrganizationsPage() {
   };
 
   if (organizations.length === 0) {
+    // If user has no orgs, allow create if they are an OWNER (or always, if you want to allow all users to create)
+    // Here, we assume user can always create their first org
     return (
       <ProtectedRoute>
         <>
@@ -170,12 +172,14 @@ export default function OrganizationsPage() {
             <div className="mb-8">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-semibold text-gray-900">Your Organizations</h2>
-                <Button
-                  variant="primary"
-                  onClick={handleCreateOrganization}
-                >
-                  Create Organization
-                </Button>
+                {organizations.some(org => getUserRoleInOrganization(org) === ROLES.OWNER) && (
+                  <Button
+                    variant="primary"
+                    onClick={handleCreateOrganization}
+                  >
+                    Create Organization
+                  </Button>
+                )}
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -218,7 +222,10 @@ export default function OrganizationsPage() {
                     {[
                       { id: 'overview', label: 'Overview', icon: '📊' },
                       { id: 'members', label: 'Members', icon: '👥' },
-                      { id: 'settings', label: 'Settings', icon: '⚙️' },
+                      // Only show settings tab for owners
+                      ...(getUserRoleInOrganization(activeOrganization) === ROLES.OWNER
+                        ? [{ id: 'settings', label: 'Settings', icon: '⚙️' }]
+                        : []),
                     ].map((tab) => (
                       <button
                         key={tab.id}
@@ -246,8 +253,8 @@ export default function OrganizationsPage() {
                       <OrganizationMembers />
                     </LazyComponent>
                   )}
-                  {selectedTab === 'settings' && (
-                    <OrganizationSettings organization={activeOrganization} />
+                  {selectedTab === 'settings' && getUserRoleInOrganization(activeOrganization) === ROLES.OWNER && (
+                    <OrganizationSettings organization={activeOrganization} userRole={getUserRoleInOrganization(activeOrganization)} />
                   )}
                 </div>
               </div>
@@ -286,7 +293,7 @@ function OrganizationOverview({ organization }: { organization: any }) {
   );
 }
 
-function OrganizationSettings({ organization }: { organization: any }) {
+function OrganizationSettings({ organization, userRole }: { organization: any, userRole: string }) {
   const dispatch = useAppDispatch();
   const { addNotification } = useUI();
   const [name, setName] = useState(organization.name || '');
@@ -401,13 +408,15 @@ function OrganizationSettings({ organization }: { organization: any }) {
       </form>
       <div className="pt-6 border-t mt-6 flex gap-4">
         {organization.isActive ? (
-          <button
-            className="bg-red-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-red-700 disabled:opacity-50"
-            onClick={handleDelete}
-            disabled={isDeleting}
-          >
-            {isDeleting ? 'Deleting...' : 'Delete Organization'}
-          </button>
+          userRole === ROLES.OWNER && (
+            <button
+              className="bg-red-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-red-700 disabled:opacity-50"
+              onClick={handleDelete}
+              disabled={isDeleting}
+            >
+              {isDeleting ? 'Deleting...' : 'Delete Organization'}
+            </button>
+          )
         ) : (
           <button
             className="bg-green-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-green-700 disabled:opacity-50"
