@@ -150,6 +150,13 @@ export class OrganizationResponse {
     example: 10,
   })
   memberCount?: number;
+
+  @ApiPropertyOptional({
+    description: 'Current user\'s role in this organization',
+    enum: OrganizationRole,
+    example: OrganizationRole.EDITOR,
+  })
+  userRole?: OrganizationRole;
 }
 
 export class MemberResponse {

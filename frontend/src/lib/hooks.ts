@@ -7,6 +7,13 @@ import { apiClient } from './api';
 import { addNotification as addNotificationAction, removeNotification as removeNotificationAction, clearNotifications as clearNotificationsAction, openModal, closeModal, openConfirmModal, closeConfirmModal, setConfirmModalLoading } from '@/store/uiSlice';
 import type { Notification } from '@/store/uiSlice';
 import type { RootState } from '@/store/store';
+import {
+  loadPosts,
+  createPost,
+  updatePost,
+  deletePost,
+  setCurrentPost
+} from '@/store/postsSlice';
 
 // Auth hooks
 export const useAuth = () => {
@@ -53,8 +60,13 @@ export const useAuth = () => {
   const refreshUser = useCallback(async () => {
     try {
       // Use the current user's ID if available, otherwise fallback to /me endpoint
-      const userData = await apiClient.getCurrentUser(user?.id || undefined);
-      dispatch(setUser(userData));
+      if (user && user.id) {
+        const userData = await apiClient.getCurrentUser(user.id);
+        if (userData) dispatch(setUser(userData));
+      } else {
+        const userData = await apiClient.getCurrentUser();
+        if (userData) dispatch(setUser(userData));
+      }
     } catch (error) {
       dispatch(logoutAction());
       throw error;
@@ -62,9 +74,10 @@ export const useAuth = () => {
   }, [dispatch, user?.id]);
 
   const updateUser = useCallback(async (userData: any) => {
+    if (!user) return;
     try {
       const updatedUser = await apiClient.updateUser(user.id, userData);
-      dispatch(setUser(updatedUser));
+      if (updatedUser) dispatch(setUser(updatedUser));
     } catch (error) {
       throw error;
     }
@@ -85,28 +98,29 @@ export const useAuth = () => {
 };
 
 // Post hooks
-// export const usePosts = () => {
-//   const posts = useAppSelector(state => state.posts);
-//   const currentPost = useAppSelector(state => state.currentPost);
-//   const isLoading = useAppSelector(state => state.isLoading);
-//   
-//   const loadPosts = useAppSelector(state => state.loadPosts);
-//   const createPost = useAppSelector(state => state.createPost);
-//   const updatePost = useAppSelector(state => state.updatePost);
-//   const deletePost = useAppSelector(state => state.deletePost);
-//   const setCurrentPost = useAppSelector(state => state.setCurrentPost);
-//
-//   return {
-//     posts,
-//     currentPost,
-//     isLoading,
-//     loadPosts,
-//     createPost,
-//     updatePost,
-//     deletePost,
-//     setCurrentPost,
-//   };
-// };
+export const usePosts = () => {
+  const posts = useAppSelector(state => state.posts.posts);
+  const currentPost = useAppSelector(state => state.posts.currentPost);
+  const isLoading = useAppSelector(state => state.posts.isLoading);
+  const error = useAppSelector(state => state.posts.error);
+  const dispatch = useAppDispatch();
+  return {
+    posts,
+    currentPost,
+    isLoading,
+    error,
+    loadPosts: (organizationId: any) => dispatch(loadPosts(organizationId)),
+    createPost: (data: any) => dispatch(createPost(data)),
+    updatePost: (id: any, data: any) => {
+      if (id !== undefined && data !== undefined) {
+        return dispatch(updatePost({ id, data }));
+      }
+      return undefined;
+    },
+    deletePost: (id: any) => dispatch(deletePost(id)),
+    setCurrentPost: (post: any) => dispatch(setCurrentPost(post)),
+  };
+};
 
 // UI hooks
 export const useUI = () => {
@@ -180,7 +194,11 @@ export const useAppInitialization = () => {
 
 // Search hooks
 export const useSearch = () => {
-  const [searchResults, setSearchResults] = useState({
+  const [searchResults, setSearchResults] = useState<{
+    posts: any[];
+    users: any[];
+    organizations: any[];
+  }>({
     posts: [],
     users: [],
     organizations: [],
@@ -191,7 +209,7 @@ export const useSearch = () => {
     try {
       setIsLoading(true);
       const results = await apiClient.searchPosts(query);
-      setSearchResults(prev => ({ ...prev, posts: results.data || [] }));
+      setSearchResults(prev => ({ ...prev, posts: (results.data || []) as any[] }));
     } catch (error) {
       console.error('Search posts error:', error);
     } finally {

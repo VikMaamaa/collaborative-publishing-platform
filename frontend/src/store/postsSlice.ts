@@ -1,54 +1,81 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { apiClient } from '@/lib/api';
+import type { Post, PaginatedResponse } from '@/types';
 
-const initialState = {
+interface PostsState {
+  posts: Post[];
+  currentPost: Post | null;
+  isLoading: boolean;
+  error: string | null;
+}
+
+const initialState: PostsState = {
   posts: [],
   currentPost: null,
   isLoading: false,
   error: null,
 };
 
-export const loadPosts = createAsyncThunk('posts/loadPosts', async (organizationId, thunkAPI) => {
-  try {
-    const response = await apiClient.getPosts(organizationId ? { organizationId } : undefined);
-    return Array.isArray(response) ? response : response.items;
-  } catch (error) {
-    return thunkAPI.rejectWithValue(error.message);
+export const loadPosts = createAsyncThunk<Post[], string | undefined>(
+  'posts/loadPosts',
+  async (organizationId, thunkAPI) => {
+    try {
+      const response = await apiClient.getPosts(organizationId ? { organizationId } : undefined);
+      if (Array.isArray(response)) return response as Post[];
+      const paginated = response as unknown as PaginatedResponse<Post>;
+      if (paginated && Array.isArray(paginated.data)) {
+        return paginated.data;
+      }
+      return [];
+    } catch (error) {
+      return thunkAPI.rejectWithValue((error as Error).message);
+    }
   }
-});
+);
 
-export const createPost = createAsyncThunk('posts/createPost', async (data, thunkAPI) => {
-  try {
-    const newPost = await apiClient.createPost(data);
-    return newPost;
-  } catch (error) {
-    return thunkAPI.rejectWithValue(error.message);
+export const createPost = createAsyncThunk<Post, any>(
+  'posts/createPost',
+  async (data, thunkAPI) => {
+    try {
+      const newPost = await apiClient.createPost(data);
+      return newPost as Post;
+    } catch (error) {
+      return thunkAPI.rejectWithValue((error as Error).message);
+    }
   }
-});
+);
 
-export const updatePost = createAsyncThunk('posts/updatePost', async ({ id, data }, thunkAPI) => {
-  try {
-    const updatedPost = await apiClient.updatePost(id, data);
-    return updatedPost;
-  } catch (error) {
-    return thunkAPI.rejectWithValue(error.message);
-  }
-});
+export type UpdatePostArg = { id: string; data: any };
 
-export const deletePost = createAsyncThunk('posts/deletePost', async (id, thunkAPI) => {
-  try {
-    await apiClient.deletePost(id);
-    return id;
-  } catch (error) {
-    return thunkAPI.rejectWithValue(error.message);
+export const updatePost = createAsyncThunk<Post, UpdatePostArg>(
+  'posts/updatePost',
+  async ({ id, data }, thunkAPI) => {
+    try {
+      const updatedPost = await apiClient.updatePost(id, data);
+      return updatedPost as Post;
+    } catch (error) {
+      return thunkAPI.rejectWithValue((error as Error).message);
+    }
   }
-});
+);
+
+export const deletePost = createAsyncThunk<string, string>(
+  'posts/deletePost',
+  async (id, thunkAPI) => {
+    try {
+      await apiClient.deletePost(id);
+      return id;
+    } catch (error) {
+      return thunkAPI.rejectWithValue((error as Error).message);
+    }
+  }
+);
 
 const postsSlice = createSlice({
   name: 'posts',
   initialState,
   reducers: {
-    setCurrentPost(state, action) {
+    setCurrentPost(state, action: { payload: Post | null }) {
       state.currentPost = action.payload;
     },
   },
@@ -64,7 +91,7 @@ const postsSlice = createSlice({
       })
       .addCase(loadPosts.rejected, (state, action) => {
         state.isLoading = false;
-        state.error = action.payload;
+        state.error = action.payload as string | null;
       })
       .addCase(createPost.fulfilled, (state, action) => {
         state.posts.push(action.payload);

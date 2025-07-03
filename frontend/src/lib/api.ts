@@ -321,7 +321,7 @@ class ApiClient {
     organizationData: Partial<Organization>
   ): Promise<Organization> {
     return this.request<Organization>(`/organizations/${organizationId}`, {
-      method: 'PATCH',
+      method: 'PUT',
       body: JSON.stringify(organizationData),
     });
   }

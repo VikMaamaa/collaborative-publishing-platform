@@ -17,7 +17,8 @@ import SEOHead, { SEOConfigs } from '@/components/seo/SEOHead';
 import { usePerformanceMonitor } from '@/lib/performance';
 import { LazyComponent } from '@/components/lazy/LazyComponents';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
-import { useOrganizationMembers } from '@/lib/api-hooks';
+import { useOrganizationMembers, usePosts } from '@/lib/api-hooks';
+import { apiClient } from '@/lib/api';
 
 export default function OrganizationsPage() {
   const { user } = useAuth();
@@ -31,6 +32,12 @@ export default function OrganizationsPage() {
   // Fetch members for the active organization
   const { data: members, loading: membersLoading } = useOrganizationMembers(activeOrganization?.id);
 
+  // Helper function to get user's role in an organization
+  const getUserRoleInOrganization = (org: any) => {
+    // Use the userRole field from the API response
+    return org.userRole || 'viewer';
+  };
+
   useEffect(() => {
     // Track component render performance
     const startTime = performance.now();
@@ -43,6 +50,13 @@ export default function OrganizationsPage() {
       measure('organizations-render', 'organizations-render-start');
     };
   }, [trackComponentRender, mark, measure]);
+
+  // Load organizations when component mounts and user is authenticated
+  useEffect(() => {
+    if (user && organizations.length === 0) {
+      dispatch(loadOrganizations());
+    }
+  }, [user, organizations.length, dispatch]);
 
   useEffect(() => {
     if (activeOrganization && members && Array.isArray(members)) {
@@ -185,8 +199,8 @@ export default function OrganizationsPage() {
                       )}
                       <div className="flex items-center justify-between text-sm text-gray-500">
                         <span>Created {new Date(org.createdAt).toLocaleDateString()}</span>
-                        <Badge variant={getRoleBadgeColor((org as any).role || 'viewer')}>
-                          {(org as any).role || 'viewer'}
+                        <Badge variant={getRoleBadgeColor(getUserRoleInOrganization(org))}>
+                          {getUserRoleInOrganization(org)}
                         </Badge>
                       </div>
                     </div>
@@ -247,21 +261,25 @@ export default function OrganizationsPage() {
 
 // Placeholder components for the tabs
 function OrganizationOverview({ organization }: { organization: any }) {
+  // Fetch posts for this organization
+  const { data: draftPosts } = usePosts({ organizationId: organization.id, status: 'draft' });
+  const { data: publishedPosts } = usePosts({ organizationId: organization.id, status: 'published' });
+  const totalMembers = organization.members ? organization.members.length : 0;
   return (
     <div className="space-y-6">
       <h3 className="text-lg font-medium text-gray-900">Organization Overview</h3>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-gray-50 p-4 rounded-lg">
           <h4 className="font-medium text-gray-900">Total Members</h4>
-          <p className="text-2xl font-bold text-blue-600">12</p>
+          <p className="text-2xl font-bold text-blue-600">{totalMembers}</p>
         </div>
         <div className="bg-gray-50 p-4 rounded-lg">
           <h4 className="font-medium text-gray-900">Active Posts</h4>
-          <p className="text-2xl font-bold text-green-600">8</p>
+          <p className="text-2xl font-bold text-green-600">{draftPosts?.data?.length ?? 0}</p>
         </div>
         <div className="bg-gray-50 p-4 rounded-lg">
           <h4 className="font-medium text-gray-900">Published Content</h4>
-          <p className="text-2xl font-bold text-purple-600">5</p>
+          <p className="text-2xl font-bold text-purple-600">{publishedPosts?.data?.length ?? 0}</p>
         </div>
       </div>
     </div>
@@ -269,10 +287,137 @@ function OrganizationOverview({ organization }: { organization: any }) {
 }
 
 function OrganizationSettings({ organization }: { organization: any }) {
+  const dispatch = useAppDispatch();
+  const { addNotification } = useUI();
+  const [name, setName] = useState(organization.name || '');
+  const [description, setDescription] = useState(organization.description || '');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      await dispatch(updateOrganization({ id: organization.id, data: { name, description } }));
+      addNotification({
+        id: Date.now().toString(),
+        type: 'success',
+        message: 'Organization updated successfully!',
+        duration: 4000,
+      });
+    } catch (err: any) {
+      setError(err.message || 'Failed to update organization.');
+      addNotification({
+        id: Date.now().toString(),
+        type: 'error',
+        message: err.message || 'Failed to update organization.',
+        duration: 4000,
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!window.confirm('Are you sure you want to delete this organization? This action cannot be undone.')) return;
+    setIsDeleting(true);
+    try {
+      await dispatch(deleteOrganization(organization.id));
+      addNotification({
+        id: Date.now().toString(),
+        type: 'success',
+        message: 'Organization deleted successfully!',
+        duration: 4000,
+      });
+    } catch (err: any) {
+      addNotification({
+        id: Date.now().toString(),
+        type: 'error',
+        message: err.message || 'Failed to delete organization.',
+        duration: 4000,
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleRestore = async () => {
+    if (!window.confirm('Are you sure you want to restore this organization?')) return;
+    setIsRestoring(true);
+    try {
+      // TODO: Implement restore logic (API endpoint needed)
+      addNotification({
+        id: Date.now().toString(),
+        type: 'success',
+        message: 'Organization restored successfully! (placeholder)',
+        duration: 4000,
+      });
+    } catch (err: any) {
+      addNotification({
+        id: Date.now().toString(),
+        type: 'error',
+        message: err.message || 'Failed to restore organization.',
+        duration: 4000,
+      });
+    } finally {
+      setIsRestoring(false);
+    }
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-xl">
       <h3 className="text-lg font-medium text-gray-900">Organization Settings</h3>
-      <p className="text-gray-600">Settings functionality will be implemented here.</p>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+          <input
+            type="text"
+            value={name}
+            onChange={e => setName(e.target.value)}
+            className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            required
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+          <textarea
+            value={description}
+            onChange={e => setDescription(e.target.value)}
+            rows={4}
+            className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+        {error && <p className="text-red-600 text-sm">{error}</p>}
+        <button
+          type="submit"
+          className="bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50"
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? 'Saving...' : 'Save Changes'}
+        </button>
+      </form>
+      <div className="pt-6 border-t mt-6 flex gap-4">
+        {organization.isActive ? (
+          <button
+            className="bg-red-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-red-700 disabled:opacity-50"
+            onClick={handleDelete}
+            disabled={isDeleting}
+          >
+            {isDeleting ? 'Deleting...' : 'Delete Organization'}
+          </button>
+        ) : (
+          <button
+            className="bg-green-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-green-700 disabled:opacity-50"
+            onClick={handleRestore}
+            disabled={isRestoring}
+          >
+            {isRestoring ? 'Restoring...' : 'Restore Organization'}
+          </button>
+        )}
+      </div>
     </div>
   );
 } 

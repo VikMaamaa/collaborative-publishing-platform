@@ -2,6 +2,8 @@
 
 import { ReactNode } from 'react';
 import { Card } from '@/components/ui';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -204,6 +206,29 @@ export default function DashboardLayout({
   footer, 
   className = '' 
 }: DashboardLayoutProps) {
+  // Default sidebar navigation
+  const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
+  const links = [
+    { href: '/dashboard', label: 'Dashboard', icon: '🏠' },
+    { href: '/organizations', label: 'Organizations', icon: '🏢' },
+    { href: '/posts', label: 'Posts', icon: '📝' },
+  ];
+  const SidebarNav = () => (
+    <nav className="h-full py-8 px-4 space-y-2">
+      {links.map(link => (
+        <Link
+          key={link.href}
+          href={link.href}
+          className={`flex items-center px-3 py-2 rounded-lg text-base font-medium transition-colors
+            ${pathname.startsWith(link.href) ? 'bg-blue-100 text-blue-700 font-semibold' : 'text-gray-700 hover:bg-gray-100'}`}
+        >
+          <span className="mr-3 text-lg">{link.icon}</span>
+          {link.label}
+        </Link>
+      ))}
+    </nav>
+  );
+
   return (
     <div className={`min-h-screen bg-gray-50 ${className}`}>
       {/* Header */}
@@ -217,11 +242,9 @@ export default function DashboardLayout({
 
       <div className="flex">
         {/* Sidebar */}
-        {sidebar && (
-          <aside className="hidden lg:block w-64 bg-white border-r border-gray-200">
-            {sidebar}
-          </aside>
-        )}
+        <aside className="hidden lg:block w-64 bg-white border-r border-gray-200">
+          {sidebar || <SidebarNav />}
+        </aside>
 
         {/* Main Content */}
         <main className="flex-1">

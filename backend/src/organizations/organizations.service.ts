@@ -72,7 +72,7 @@ export class OrganizationsService {
       .leftJoinAndSelect('org.members', 'allMembers')
       .getMany();
 
-    return organizations.map(org => this.mapToOrganizationResponse(org));
+    return organizations.map(org => this.mapToOrganizationResponse(org, userId));
   }
 
   async findOrganizationById(
@@ -601,7 +601,14 @@ export class OrganizationsService {
     return crypto.randomBytes(32).toString('hex');
   }
 
-  private mapToOrganizationResponse(organization: Organization): OrganizationResponse {
+  private mapToOrganizationResponse(organization: Organization, userId?: string): OrganizationResponse {
+    // Find the user's role in this organization
+    let userRole = OrganizationRole.VIEWER; // Default to VIEWER
+    if (userId && organization.members) {
+      const userMembership = organization.members.find(member => member.userId === userId && member.isActive);
+      userRole = userMembership?.role as OrganizationRole || OrganizationRole.VIEWER;
+    }
+
     return {
       id: organization.id,
       name: organization.name,
@@ -611,6 +618,7 @@ export class OrganizationsService {
       createdAt: organization.createdAt,
       updatedAt: organization.updatedAt,
       memberCount: organization.members?.filter(m => m.isActive).length || 0,
+      userRole: userRole, // Add the user's role to the response
     };
   }
 
