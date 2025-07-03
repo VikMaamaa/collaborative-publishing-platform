@@ -3,7 +3,6 @@
 import { useUI } from '@/lib/hooks';
 import { useAppSelector } from '@/store/hooks';
 import CreateOrganizationModal from '@/components/organizations/CreateOrganizationModal';
-import InviteMemberModal from '@/components/organizations/InviteMemberModal';
 
 export default function ModalManager() {
   const { modals = { createOrganization: false, inviteMember: false }, closeModal = () => {}, confirmModal = { open: false }, closeConfirmModal = () => {} } = useUI();
@@ -15,13 +14,6 @@ export default function ModalManager() {
       <CreateOrganizationModal
         isOpen={modals?.createOrganization ?? false}
         onClose={() => closeModal('createOrganization')}
-      />
-
-      {/* Invite Member Modal */}
-      <InviteMemberModal
-        isOpen={modals?.inviteMember ?? false}
-        onClose={() => closeModal('inviteMember')}
-        organizationId={activeOrganization?.id || ''}
       />
 
       {/* Contextual Confirmation Modal */}

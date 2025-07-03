@@ -1,7 +1,8 @@
 'use client';
 
 import { useAppSelector, useAppDispatch } from '@/store/hooks';
-import { useUI, usePermissions } from '@/lib/hooks';
+import { usePermissions } from '@/lib/hooks';
+import { useRouter } from 'next/navigation';
 import { Button, Card, Badge, SkeletonList } from '@/components/ui';
 import { ROLES } from '@/constants/roles';
 import React, { useState } from 'react';
@@ -10,12 +11,12 @@ import InvitationList from './InvitationList';
 export default function OrganizationMembers() {
   const activeOrganization = useAppSelector(state => state.organizations.activeOrganization);
   const dispatch = useAppDispatch();
-  const { openModal } = useUI();
+  const router = useRouter();
   const { canInviteMembers, hasRole, userRole } = usePermissions();
   const members = activeOrganization?.members || [];
 
   const handleInviteMember = () => {
-    openModal('inviteMember');
+    router.push('/organizations/invite');
   };
 
   if (!activeOrganization) {
